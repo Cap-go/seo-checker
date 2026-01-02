@@ -1,0 +1,55 @@
+{
+  "name": "@capgo/seo-checker",
+  "version": "0.0.1",
+  "description": "Static SEO checker for analyzing built HTML files in dist folders",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "seo-checker": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "check": "node ./dist/cli.js"
+  },
+  "keywords": [
+    "seo",
+    "checker",
+    "static",
+    "html",
+    "analysis",
+    "audit"
+  ],
+  "author": "Capgo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cap-go/seo-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cap-go/seo-checker/issues"
+  },
+  "homepage": "https://github.com/Cap-go/seo-checker#readme",
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
