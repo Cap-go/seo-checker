@@ -2,6 +2,8 @@
 
 Static SEO checker for analyzing built HTML files in dist folders. Performs comprehensive SEO analysis with 1000+ rules covering metadata, content quality, accessibility, structured data, and more.
 
+Inspired by Ahrefs SEO Audit and Lighthouse SEO audits, but focused on static sites built with frameworks like Astro, Next.js, SvelteKit, etc.
+
 ## Installation
 
 ```bash
