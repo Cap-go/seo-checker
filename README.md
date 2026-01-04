@@ -30,15 +30,15 @@ npx @capgo/seo-checker --generate-config
 
 ### CLI Options
 
-| Option              | Description                         | Default                   |
-| ------------------- | ----------------------------------- | ------------------------- |
-| `--dist <path>`     | Path to dist folder                 | `./dist`                  |
-| `--config <path>`   | Path to config file                 | `seo-checker.config.json` |
-| `--output <format>` | Output format: console, json, sarif | `console`                 |
-| `--report <path>`   | Path to write report file           | -                         |
-| `--fail-on <level>` | Fail on: error, warning, notice     | `error`                   |
-| `--max-issues <n>`  | Maximum issues before stopping      | `0` (unlimited)           |
-| `--generate-config` | Generate a sample config file       | -                         |
+| Option              | Description                                 | Default                   |
+| ------------------- | ------------------------------------------- | ------------------------- |
+| `--dist <path>`     | Path to dist folder                         | `./dist`                  |
+| `--config <path>`   | Path to config file                         | `seo-checker.config.json` |
+| `--output <format>` | Output format: console, json, sarif, github | `console`                 |
+| `--report <path>`   | Path to write report file                   | -                         |
+| `--fail-on <level>` | Fail on: error, warning, notice             | `error`                   |
+| `--max-issues <n>`  | Maximum issues before stopping              | `0` (unlimited)           |
+| `--generate-config` | Generate a sample config file               | -                         |
 
 ## Configuration
 
@@ -131,6 +131,22 @@ Machine-readable JSON with all issues and statistics.
 ### SARIF
 
 Static Analysis Results Interchange Format for CI/CD integration.
+
+### GitHub
+
+GitHub Actions workflow commands format. Issues appear as annotations in the PR/commit view.
+
+```bash
+# Use in GitHub Actions
+npx @capgo/seo-checker --output github
+```
+
+Example workflow:
+
+```yaml
+- name: SEO Check
+  run: npx @capgo/seo-checker --output github --fail-on error,warning
+```
 
 ## License
 

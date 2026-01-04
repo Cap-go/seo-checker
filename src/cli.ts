@@ -10,7 +10,7 @@
  * Options:
  *   --dist <path>      Path to dist folder (default: ./dist)
  *   --config <path>    Path to config file
- *   --output <format>  Output format: console, json, sarif (default: console)
+ *   --output <format>  Output format: console, json, sarif, github (default: console)
  *   --report <path>    Path to write report file
  *   --fail-on <level>  Fail on: error, warning, notice (default: error)
  *   --max-issues <n>   Maximum issues before stopping
@@ -23,7 +23,7 @@ import * as path from 'node:path'
 import { checkDuplicates, checkRobotsTxt, checkSitemap, runPageChecks } from './checks.js'
 import { filterDisabledRules, filterExcludedIssues, loadExclusionsFromFile } from './exclusions.js'
 import { scanDistFolder } from './parser.js'
-import { formatJsonReport, printReport, writeReport } from './reporter.js'
+import { formatGitHubReport, formatJsonReport, printReport, writeReport } from './reporter.js'
 
 /**
  * Default configuration
@@ -84,7 +84,7 @@ function mergeConfig(
 function parseArgs(): {
   configPath?: string
   distPath?: string
-  outputFormat?: 'console' | 'json' | 'sarif'
+  outputFormat?: 'console' | 'json' | 'sarif' | 'github'
   reportPath?: string
   failOn?: Severity[]
   maxIssues?: number
@@ -102,7 +102,7 @@ function parseArgs(): {
         result.distPath = args[++i]
         break
       case '--output':
-        result.outputFormat = args[++i] as 'console' | 'json' | 'sarif'
+        result.outputFormat = args[++i] as 'console' | 'json' | 'sarif' | 'github'
         break
       case '--report':
         result.reportPath = args[++i]
@@ -322,6 +322,9 @@ async function run(): Promise<void> {
   // Output results
   if (config.outputFormat === 'json') {
     console.log(formatJsonReport(result))
+  }
+  else if (config.outputFormat === 'github') {
+    console.log(formatGitHubReport(result))
   }
   else {
     printReport(result)

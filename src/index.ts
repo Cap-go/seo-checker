@@ -49,6 +49,7 @@ export {
 // Reporter
 export {
   formatConsoleReport,
+  formatGitHubReport,
   formatJsonReport,
   formatSarifReport,
   printReport,

@@ -161,6 +161,57 @@ export function formatJsonReport(result: CheckResult): string {
 }
 
 /**
+ * Format results for GitHub Actions annotations
+ * Uses workflow commands: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions
+ */
+export function formatGitHubReport(result: CheckResult): string {
+  const lines: string[] = []
+
+  // GitHub Actions severity mapping
+  const severityMap: Record<Severity, 'error' | 'warning' | 'notice'> = {
+    error: 'error',
+    warning: 'warning',
+    notice: 'notice',
+  }
+
+  // Output each issue as a GitHub annotation
+  for (const issue of result.issues) {
+    const severity = severityMap[issue.severity]
+    const file = issue.relativePath
+    const line = issue.line || 1
+    const title = `${issue.ruleId}: ${issue.ruleName}`
+    let message = issue.fixHint
+    if (issue.element) {
+      message = `Element: ${issue.element}. ${message}`
+    }
+    if (issue.actual) {
+      message = `Found: ${issue.actual}. ${message}`
+    }
+
+    // GitHub annotation format: ::error file={name},line={line},title={title}::{message}
+    lines.push(`::${severity} file=${file},line=${line},title=${title}::${message}`)
+  }
+
+  // Add summary as a group
+  lines.push('')
+  lines.push('::group::SEO Check Summary')
+  lines.push(`Total pages scanned: ${result.stats.totalPages}`)
+  lines.push(`Total images checked: ${result.stats.totalImages}`)
+  lines.push(`Total links checked: ${result.stats.totalLinks}`)
+  lines.push('')
+  lines.push(`Errors: ${result.stats.issuesBySeverity.error || 0}`)
+  lines.push(`Warnings: ${result.stats.issuesBySeverity.warning || 0}`)
+  lines.push(`Notices: ${result.stats.issuesBySeverity.notice || 0}`)
+  if (result.excludedCount > 0) {
+    lines.push(`Excluded: ${result.excludedCount}`)
+  }
+  lines.push(`Duration: ${result.duration}ms`)
+  lines.push('::endgroup::')
+
+  return lines.join('\n')
+}
+
+/**
  * Format results as SARIF (Static Analysis Results Interchange Format)
  * This format is supported by many CI/CD tools and code editors
  */
@@ -233,7 +284,7 @@ export function formatSarifReport(result: CheckResult): string {
  */
 export function writeReport(
   result: CheckResult,
-  format: 'console' | 'json' | 'sarif',
+  format: 'console' | 'json' | 'sarif' | 'github',
   filePath: string,
 ): void {
   let content: string
@@ -244,6 +295,9 @@ export function writeReport(
       break
     case 'sarif':
       content = formatSarifReport(result)
+      break
+    case 'github':
+      content = formatGitHubReport(result)
       break
     default:
       // Strip ANSI codes for file output

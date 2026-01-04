@@ -78,7 +78,7 @@ export interface SEOCheckerConfig {
   /** Maximum issues to report before stopping */
   maxIssues?: number
   /** Output format */
-  outputFormat?: 'console' | 'json' | 'sarif'
+  outputFormat?: 'console' | 'json' | 'sarif' | 'github'
   /** Path to output report file */
   reportPath?: string
 }
