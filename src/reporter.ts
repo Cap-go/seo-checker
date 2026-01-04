@@ -3,22 +3,22 @@
  * Formats and outputs check results
  */
 
+import type { CheckResult, SEOIssue, Severity } from './types.js'
 import * as fs from 'node:fs'
-import type { SEOIssue, CheckResult, Severity } from './types.js'
 
 // ANSI color codes
 const COLORS = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  red: '\x1b[31m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  cyan: '\x1b[36m',
-  white: '\x1b[37m',
-  bgRed: '\x1b[41m',
-  bgYellow: '\x1b[43m',
-  bgBlue: '\x1b[44m',
+  reset: '\x1B[0m',
+  bold: '\x1B[1m',
+  dim: '\x1B[2m',
+  red: '\x1B[31m',
+  yellow: '\x1B[33m',
+  blue: '\x1B[34m',
+  cyan: '\x1B[36m',
+  white: '\x1B[37m',
+  bgRed: '\x1B[41m',
+  bgYellow: '\x1B[43m',
+  bgBlue: '\x1B[44m',
 }
 
 /**
@@ -66,7 +66,8 @@ function formatIssueConsole(issue: SEOIssue): string {
 
   if (issue.actual && issue.expected) {
     output += `    ${COLORS.dim}Found:${COLORS.reset} ${issue.actual}, ${COLORS.dim}Expected:${COLORS.reset} ${issue.expected}\n`
-  } else if (issue.actual) {
+  }
+  else if (issue.actual) {
     output += `    ${COLORS.dim}Found:${COLORS.reset} ${issue.actual}\n`
   }
 
@@ -135,14 +136,15 @@ export function formatConsoleReport(result: CheckResult): string {
   lines.push(`  Duration: ${result.duration}ms`)
   lines.push('')
 
-  const totalIssues =
-    (result.stats.issuesBySeverity.error || 0) +
-    (result.stats.issuesBySeverity.warning || 0) +
-    (result.stats.issuesBySeverity.notice || 0)
+  const totalIssues
+    = (result.stats.issuesBySeverity.error || 0)
+      + (result.stats.issuesBySeverity.warning || 0)
+      + (result.stats.issuesBySeverity.notice || 0)
 
   if (totalIssues === 0) {
     lines.push(`${COLORS.bold}${COLORS.cyan}All SEO checks passed!${COLORS.reset}`)
-  } else {
+  }
+  else {
     lines.push(`${COLORS.bold}Found ${totalIssues} issues${COLORS.reset}`)
   }
 
@@ -179,8 +181,8 @@ export function formatSarifReport(result: CheckResult): string {
             name: 'SEO Static Checker',
             version: '1.0.0',
             informationUri: 'https://capgo.app',
-            rules: [...new Set(result.issues.map((i) => i.ruleId))].map((ruleId) => {
-              const issue = result.issues.find((i) => i.ruleId === ruleId)
+            rules: [...new Set(result.issues.map(i => i.ruleId))].map((ruleId) => {
+              const issue = result.issues.find(i => i.ruleId === ruleId)
               return {
                 id: ruleId,
                 name: issue?.ruleName || ruleId,
@@ -195,7 +197,7 @@ export function formatSarifReport(result: CheckResult): string {
             }),
           },
         },
-        results: result.issues.map((issue) => ({
+        results: result.issues.map(issue => ({
           ruleId: issue.ruleId,
           level: sarifSeverityMap[issue.severity],
           message: {
@@ -232,7 +234,7 @@ export function formatSarifReport(result: CheckResult): string {
 export function writeReport(
   result: CheckResult,
   format: 'console' | 'json' | 'sarif',
-  filePath: string
+  filePath: string,
 ): void {
   let content: string
 
@@ -245,7 +247,7 @@ export function writeReport(
       break
     default:
       // Strip ANSI codes for file output
-      content = formatConsoleReport(result).replace(/\x1b\[[0-9;]*m/g, '')
+      content = formatConsoleReport(result).replace(/\x1B\[[0-9;]*m/g, '')
   }
 
   fs.writeFileSync(filePath, content, 'utf-8')

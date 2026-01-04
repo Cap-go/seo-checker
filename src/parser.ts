@@ -3,11 +3,11 @@
  * Optimized for maximum performance with parallel processing
  */
 
-import { load, type CheerioAPI } from 'cheerio'
+import type { PageData, SEOCheckerConfig, SiteData } from './types.js'
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import type { PageData, SiteData, SEOCheckerConfig } from './types.js'
+import { load } from 'cheerio'
 
 // Pre-compiled URL for faster hostname comparison
 let baseHostname: string | null = null
@@ -20,7 +20,7 @@ export function parseHtmlFile(
   filePath: string,
   html: string,
   distPath: string,
-  config: SEOCheckerConfig
+  config: SEOCheckerConfig,
 ): PageData {
   const $ = load(html, { xml: false })
   const relativePath = path.relative(distPath, filePath)
@@ -33,7 +33,8 @@ export function parseHtmlFile(
   if (baseHostname === null) {
     try {
       baseHostname = new URL(config.baseUrl).hostname
-    } catch {
+    }
+    catch {
       baseHostname = ''
     }
   }
@@ -49,18 +50,30 @@ export function parseHtmlFile(
 
   $('h1, h2, h3, h4, h5, h6').each((_, el) => {
     const tagName = ($(el).prop('tagName') || '').toLowerCase()
-    const level = parseInt(tagName.charAt(1), 10)
+    const level = Number.parseInt(tagName.charAt(1), 10)
     const text = $(el).text().trim()
 
-    if (!isNaN(level)) {
+    if (!Number.isNaN(level)) {
       headingOrder.push({ level, text })
       switch (level) {
-        case 1: h1s.push(text); break
-        case 2: h2s.push(text); break
-        case 3: h3s.push(text); break
-        case 4: h4s.push(text); break
-        case 5: h5s.push(text); break
-        case 6: h6s.push(text); break
+        case 1:
+          h1s.push(text)
+          break
+        case 2:
+          h2s.push(text)
+          break
+        case 3:
+          h3s.push(text)
+          break
+        case 4:
+          h4s.push(text)
+          break
+        case 5:
+          h5s.push(text)
+          break
+        case 6:
+          h6s.push(text)
+          break
       }
     }
   })
@@ -78,12 +91,14 @@ export function parseHtmlFile(
     if (href && !href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
       if (href.startsWith('/') || href.startsWith('./') || href.startsWith('../')) {
         isInternal = true
-      } else if (href.startsWith('http://') || href.startsWith('https://')) {
+      }
+      else if (href.startsWith('http://') || href.startsWith('https://')) {
         try {
           const urlHost = new URL(href).hostname
           isExternal = urlHost !== baseHostname
           isInternal = urlHost === baseHostname
-        } catch {
+        }
+        catch {
           // Invalid URL
         }
       }
@@ -118,7 +133,8 @@ export function parseHtmlFile(
     if (content) {
       try {
         jsonLd.push(JSON.parse(content))
-      } catch {
+      }
+      catch {
         jsonLd.push({ _parseError: true, _raw: content })
       }
     }
@@ -138,7 +154,8 @@ export function parseHtmlFile(
   const elementIds: string[] = []
   $('[id]').each((_, el) => {
     const id = $(el).attr('id')
-    if (id) elementIds.push(id)
+    if (id)
+      elementIds.push(id)
   })
 
   // Calculate word count - fast path
@@ -151,7 +168,8 @@ export function parseHtmlFile(
     const httpEquiv = $('meta[http-equiv="Content-Type"]').attr('content')
     if (httpEquiv) {
       const match = httpEquiv.match(/charset=([^\s;]+)/i)
-      if (match) charset = match[1]
+      if (match)
+        charset = match[1]
     }
   }
 
@@ -208,7 +226,7 @@ export async function scanDistFolder(config: SEOCheckerConfig): Promise<SiteData
   const descriptions = new Map<string, string[]>()
   const h1s = new Map<string, string[]>()
   const canonicals = new Map<string, string[]>()
-  const imageFiles = new Map<string, { path: string; size: number }>()
+  const imageFiles = new Map<string, { path: string, size: number }>()
 
   const MIN_FILE_SIZE = 500
   const MAX_REDIRECT_SIZE = 1000
@@ -221,26 +239,28 @@ export async function scanDistFolder(config: SEOCheckerConfig): Promise<SiteData
 
   // Get file stats in parallel batches
   const BATCH_SIZE = 500
-  const htmlFilesWithStats: { path: string; size: number; content?: string }[] = []
+  const htmlFilesWithStats: { path: string, size: number, content?: string }[] = []
 
   for (let i = 0; i < htmlFiles.length; i += BATCH_SIZE) {
     const batch = htmlFiles.slice(i, i + BATCH_SIZE)
     const statsPromises = batch.map(async (filePath) => {
       try {
         const stats = await fsp.stat(filePath)
-        if (stats.size < MIN_FILE_SIZE) return null
+        if (stats.size < MIN_FILE_SIZE)
+          return null
 
         // Read content for small files to check for redirects
         if (stats.size < MAX_REDIRECT_SIZE) {
           const content = await fsp.readFile(filePath, 'utf-8')
-          if (content.includes('http-equiv="refresh"') || content.includes("http-equiv='refresh'")) {
+          if (content.includes('http-equiv="refresh"') || content.includes('http-equiv=\'refresh\'')) {
             return null
           }
           return { path: filePath, size: stats.size, content }
         }
 
         return { path: filePath, size: stats.size }
-      } catch {
+      }
+      catch {
         return null
       }
     })
@@ -259,7 +279,8 @@ export async function scanDistFolder(config: SEOCheckerConfig): Promise<SiteData
       try {
         const html = file.content || await fsp.readFile(file.path, 'utf-8')
         return parseHtmlFile(file.path, html, distPath, config)
-      } catch {
+      }
+      catch {
         return null
       }
     })
@@ -267,7 +288,8 @@ export async function scanDistFolder(config: SEOCheckerConfig): Promise<SiteData
     const parsedPages = await Promise.all(parsePromises)
 
     for (const pageData of parsedPages) {
-      if (!pageData) continue
+      if (!pageData)
+        continue
 
       pages.set(pageData.relativePath, pageData)
 
@@ -306,7 +328,8 @@ export async function scanDistFolder(config: SEOCheckerConfig): Promise<SiteData
         const stats = await fsp.stat(filePath)
         const relativePath = path.relative(distPath, filePath)
         return { relativePath, path: filePath, size: stats.size }
-      } catch {
+      }
+      catch {
         return null
       }
     })
@@ -341,7 +364,8 @@ async function findFilesParallel(dir: string, pattern: string | RegExp): Promise
     let entries: fs.Dirent[]
     try {
       entries = await fsp.readdir(currentDir, { withFileTypes: true })
-    } catch {
+    }
+    catch {
       return
     }
 
@@ -352,7 +376,8 @@ async function findFilesParallel(dir: string, pattern: string | RegExp): Promise
 
       if (entry.isDirectory()) {
         subdirs.push(walk(fullPath))
-      } else if (entry.isFile()) {
+      }
+      else if (entry.isFile()) {
         const matches = isRegex
           ? (pattern as RegExp).test(entry.name)
           : entry.name.endsWith(ext!)
@@ -379,13 +404,15 @@ const fileExistsCache = new Map<string, boolean>()
  */
 export function fileExists(filePath: string): boolean {
   const cached = fileExistsCache.get(filePath)
-  if (cached !== undefined) return cached
+  if (cached !== undefined)
+    return cached
 
   try {
     fs.accessSync(filePath, fs.constants.F_OK)
     fileExistsCache.set(filePath, true)
     return true
-  } catch {
+  }
+  catch {
     fileExistsCache.set(filePath, false)
     return false
   }
@@ -404,7 +431,7 @@ export function clearFileExistsCache(): void {
 export function resolveToFilePath(
   href: string,
   currentPagePath: string,
-  distPath: string
+  distPath: string,
 ): string | null {
   if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
     return null
@@ -415,18 +442,24 @@ export function resolveToFilePath(
 
   if (cleanHref.startsWith('/')) {
     const targetPath = path.join(distPath, cleanHref)
-    if (fileExists(targetPath)) return targetPath
-    if (fileExists(path.join(targetPath, 'index.html'))) return path.join(targetPath, 'index.html')
-    if (fileExists(targetPath + '.html')) return targetPath + '.html'
+    if (fileExists(targetPath))
+      return targetPath
+    if (fileExists(path.join(targetPath, 'index.html')))
+      return path.join(targetPath, 'index.html')
+    if (fileExists(`${targetPath}.html`))
+      return `${targetPath}.html`
     return targetPath
   }
 
   const currentDir = path.dirname(path.join(distPath, currentPagePath))
   const targetPath = path.resolve(currentDir, cleanHref)
 
-  if (fileExists(targetPath)) return targetPath
-  if (fileExists(path.join(targetPath, 'index.html'))) return path.join(targetPath, 'index.html')
-  if (fileExists(targetPath + '.html')) return targetPath + '.html'
+  if (fileExists(targetPath))
+    return targetPath
+  if (fileExists(path.join(targetPath, 'index.html')))
+    return path.join(targetPath, 'index.html')
+  if (fileExists(`${targetPath}.html`))
+    return `${targetPath}.html`
 
   return targetPath
 }

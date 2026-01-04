@@ -3,8 +3,8 @@
  * Allows skipping specific issues that are known to be acceptable
  */
 
+import type { ExclusionRule, SEOCheckerConfig, SEOIssue } from './types.js'
 import * as fs from 'node:fs'
-import type { SEOIssue, ExclusionRule, SEOCheckerConfig } from './types.js'
 
 /**
  * Check if a path matches a glob pattern
@@ -21,7 +21,8 @@ function matchGlob(pattern: string, path: string): boolean {
   try {
     const regex = new RegExp(`^${regexPattern}$`)
     return regex.test(path)
-  } catch {
+  }
+  catch {
     // Invalid regex pattern - skip this match
     return false
   }
@@ -56,7 +57,8 @@ export function shouldExcludeIssue(issue: SEOIssue, exclusions: ExclusionRule[])
         if (!regex.test(issue.element)) {
           continue
         }
-      } catch {
+      }
+      catch {
         // Invalid regex pattern - skip this rule
         continue
       }
@@ -77,8 +79,8 @@ export function shouldExcludeIssue(issue: SEOIssue, exclusions: ExclusionRule[])
  */
 export function filterExcludedIssues(
   issues: SEOIssue[],
-  config: SEOCheckerConfig
-): { filtered: SEOIssue[]; excludedCount: number } {
+  config: SEOCheckerConfig,
+): { filtered: SEOIssue[], excludedCount: number } {
   const exclusions = config.exclusions || []
 
   if (exclusions.length === 0) {
@@ -91,7 +93,8 @@ export function filterExcludedIssues(
   for (const issue of issues) {
     if (shouldExcludeIssue(issue, exclusions)) {
       excludedCount++
-    } else {
+    }
+    else {
       filtered.push(issue)
     }
   }
@@ -110,7 +113,7 @@ export function filterDisabledRules(issues: SEOIssue[], config: SEOCheckerConfig
   }
 
   const disabledSet = new Set(disabled)
-  return issues.filter((issue) => !disabledSet.has(issue.ruleId))
+  return issues.filter(issue => !disabledSet.has(issue.ruleId))
 }
 
 /**
@@ -130,7 +133,8 @@ export function loadExclusionsFromFile(filePath: string): ExclusionRule[] {
     }
 
     return []
-  } catch {
+  }
+  catch {
     return []
   }
 }

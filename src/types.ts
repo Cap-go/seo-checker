@@ -113,7 +113,7 @@ export interface PageData {
   /** H6 elements */
   h6s: string[]
   /** All headings in order */
-  headingOrder: { level: number; text: string; line?: number }[]
+  headingOrder: { level: number, text: string, line?: number }[]
   /** OpenGraph tags */
   og: {
     title?: string
@@ -130,7 +130,7 @@ export interface PageData {
     image?: string
   }
   /** Hreflang links */
-  hreflangs: { lang: string; url: string }[]
+  hreflangs: { lang: string, url: string }[]
   /** All links on page */
   links: {
     href: string
@@ -174,7 +174,7 @@ export interface SiteData {
   /** All canonicals for duplicate detection */
   canonicals: Map<string, string[]>
   /** All image files in the dist */
-  imageFiles: Map<string, { path: string; size: number }>
+  imageFiles: Map<string, { path: string, size: number }>
 }
 
 export interface CheckResult {

@@ -17,13 +17,13 @@
  *   --generate-config  Generate a sample config file
  */
 
+import type { CheckResult, SEOCheckerConfig, SEOIssue, Severity } from './types.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { SEOCheckerConfig, CheckResult, Severity, SEOIssue } from './types.js'
+import { checkDuplicates, checkRobotsTxt, checkSitemap, runPageChecks } from './checks.js'
+import { filterDisabledRules, filterExcludedIssues, loadExclusionsFromFile } from './exclusions.js'
 import { scanDistFolder } from './parser.js'
-import { runPageChecks, checkDuplicates, checkRobotsTxt, checkSitemap } from './checks.js'
-import { filterExcludedIssues, filterDisabledRules, loadExclusionsFromFile } from './exclusions.js'
-import { printReport, writeReport, formatJsonReport } from './reporter.js'
+import { formatJsonReport, printReport, writeReport } from './reporter.js'
 
 /**
  * Default configuration
@@ -51,7 +51,8 @@ function loadConfig(configPath: string): Partial<SEOCheckerConfig> {
   try {
     const content = fs.readFileSync(configPath, 'utf-8')
     return JSON.parse(content)
-  } catch (error) {
+  }
+  catch (error) {
     console.error(`Failed to load config from ${configPath}:`, error)
     return {}
   }
@@ -62,7 +63,7 @@ function loadConfig(configPath: string): Partial<SEOCheckerConfig> {
  */
 function mergeConfig(
   base: SEOCheckerConfig,
-  overrides: Partial<SEOCheckerConfig>
+  overrides: Partial<SEOCheckerConfig>,
 ): SEOCheckerConfig {
   return {
     ...base,
@@ -110,7 +111,7 @@ function parseArgs(): {
         result.failOn = args[++i].split(',') as Severity[]
         break
       case '--max-issues':
-        result.maxIssues = parseInt(args[++i], 10)
+        result.maxIssues = Number.parseInt(args[++i], 10)
         break
       case '--generate-config':
         result.generateConfig = true
@@ -198,11 +199,16 @@ async function run(): Promise<void> {
   }
 
   // Override with command line args
-  if (args.distPath) config.distPath = args.distPath
-  if (args.outputFormat) config.outputFormat = args.outputFormat
-  if (args.reportPath) config.reportPath = args.reportPath
-  if (args.failOn) config.failOn = args.failOn
-  if (args.maxIssues) config.maxIssues = args.maxIssues
+  if (args.distPath)
+    config.distPath = args.distPath
+  if (args.outputFormat)
+    config.outputFormat = args.outputFormat
+  if (args.reportPath)
+    config.reportPath = args.reportPath
+  if (args.failOn)
+    config.failOn = args.failOn
+  if (args.maxIssues)
+    config.maxIssues = args.maxIssues
 
   // Resolve dist path
   config.distPath = path.resolve(process.cwd(), config.distPath)
@@ -237,8 +243,8 @@ async function run(): Promise<void> {
 
     // Run checks for batch in parallel
     const batchResults = await Promise.all(
-      batch.map(page => {
-        return new Promise<{ issues: SEOIssue[]; links: number; images: number }>((resolve) => {
+      batch.map((page) => {
+        return new Promise<{ issues: SEOIssue[], links: number, images: number }>((resolve) => {
           // Use setImmediate to allow other operations to proceed
           setImmediate(() => {
             const issues = runPageChecks(page, config, siteData)
@@ -249,7 +255,7 @@ async function run(): Promise<void> {
             })
           })
         })
-      })
+      }),
     )
 
     // Aggregate results
@@ -316,7 +322,8 @@ async function run(): Promise<void> {
   // Output results
   if (config.outputFormat === 'json') {
     console.log(formatJsonReport(result))
-  } else {
+  }
+  else {
     printReport(result)
   }
 
@@ -338,9 +345,9 @@ async function run(): Promise<void> {
   }
 
   if (shouldFail) {
-    const failingSeverities = failOn.filter((s) => issuesBySeverity[s] > 0)
+    const failingSeverities = failOn.filter(s => issuesBySeverity[s] > 0)
     console.error(
-      `\nFailed: Found ${failingSeverities.map((s) => `${issuesBySeverity[s]} ${s}(s)`).join(', ')}`
+      `\nFailed: Found ${failingSeverities.map(s => `${issuesBySeverity[s]} ${s}(s)`).join(', ')}`,
     )
     process.exit(1)
   }

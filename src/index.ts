@@ -3,75 +3,75 @@
  * Static SEO analysis for dist folders
  */
 
-// Types
-export type {
-  Severity,
-  RuleScope,
-  SEORule,
-  SEOIssue,
-  ExclusionRule,
-  SEOCheckerConfig,
-  PageData,
-  SiteData,
-  CheckResult,
-} from './types.js'
-
-// Parser
-export {
-  parseHtmlFile,
-  scanDistFolder,
-  fileExists,
-  clearFileExistsCache,
-  resolveToFilePath,
-} from './parser.js'
-
 // Checks
 export {
-  checkMetadata,
-  checkHtmlValidity,
-  checkContentLength,
-  checkContentFormat,
-  checkHeadings,
-  checkIndexability,
-  checkLinks,
-  checkUrlHygiene,
-  checkImages,
-  checkSocialTags,
-  checkInternationalSEO,
-  checkStructuredData,
-  checkContentQuality,
-  checkTemplateHygiene,
   checkAccessibility,
-  checkHtmlSemantics,
+  checkContentFormat,
+  checkContentLength,
+  checkContentQuality,
   checkDuplicates,
+  checkHeadings,
+  checkHtmlSemantics,
+  checkHtmlValidity,
+  checkImages,
+  checkIndexability,
+  checkInternationalSEO,
+  checkLinks,
+  checkMetadata,
   checkRobotsTxt,
   checkSitemap,
+  checkSocialTags,
+  checkStructuredData,
+  checkTemplateHygiene,
+  checkUrlHygiene,
   runPageChecks,
 } from './checks.js'
 
 // Exclusions
 export {
-  shouldExcludeIssue,
-  filterExcludedIssues,
-  filterDisabledRules,
-  loadExclusionsFromFile,
-  generateExclusionForIssue,
   exportExclusionsToFile,
+  filterDisabledRules,
+  filterExcludedIssues,
+  generateExclusionForIssue,
+  loadExclusionsFromFile,
+  shouldExcludeIssue,
 } from './exclusions.js'
+
+// Parser
+export {
+  clearFileExistsCache,
+  fileExists,
+  parseHtmlFile,
+  resolveToFilePath,
+  scanDistFolder,
+} from './parser.js'
 
 // Reporter
 export {
   formatConsoleReport,
   formatJsonReport,
   formatSarifReport,
-  writeReport,
   printReport,
+  writeReport,
 } from './reporter.js'
 
 // Rules
 export {
-  SEO_RULES,
   getRule,
   getRulesByCategory,
   getRulesBySeverity,
+  SEO_RULES,
 } from './rules.js'
+
+// Types
+export type {
+  CheckResult,
+  ExclusionRule,
+  PageData,
+  RuleScope,
+  SEOCheckerConfig,
+  SEOIssue,
+  SEORule,
+  Severity,
+  SiteData,
+} from './types.js'

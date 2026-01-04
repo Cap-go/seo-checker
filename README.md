@@ -28,15 +28,15 @@ npx @capgo/seo-checker --generate-config
 
 ### CLI Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--dist <path>` | Path to dist folder | `./dist` |
-| `--config <path>` | Path to config file | `seo-checker.config.json` |
-| `--output <format>` | Output format: console, json, sarif | `console` |
-| `--report <path>` | Path to write report file | - |
-| `--fail-on <level>` | Fail on: error, warning, notice | `error` |
-| `--max-issues <n>` | Maximum issues before stopping | `0` (unlimited) |
-| `--generate-config` | Generate a sample config file | - |
+| Option              | Description                         | Default                   |
+| ------------------- | ----------------------------------- | ------------------------- |
+| `--dist <path>`     | Path to dist folder                 | `./dist`                  |
+| `--config <path>`   | Path to config file                 | `seo-checker.config.json` |
+| `--output <format>` | Output format: console, json, sarif | `console`                 |
+| `--report <path>`   | Path to write report file           | -                         |
+| `--fail-on <level>` | Fail on: error, warning, notice     | `error`                   |
+| `--max-issues <n>`  | Maximum issues before stopping      | `0` (unlimited)           |
+| `--generate-config` | Generate a sample config file       | -                         |
 
 ## Configuration
 
@@ -71,32 +71,32 @@ Create a `seo-checker.config.json` file:
 
 ```typescript
 import {
-  scanDistFolder,
-  runPageChecks,
   checkDuplicates,
-  printReport
-} from '@capgo/seo-checker';
+  printReport,
+  runPageChecks,
+  scanDistFolder
+} from '@capgo/seo-checker'
 
 const config = {
   distPath: './dist',
   baseUrl: 'https://example.com',
   languages: ['en'],
   defaultLanguage: 'en',
-};
+}
 
 // Scan the dist folder
-const siteData = await scanDistFolder(config);
+const siteData = await scanDistFolder(config)
 
 // Run checks on each page
-const issues = [];
+const issues = []
 for (const page of siteData.pages.values()) {
-  issues.push(...runPageChecks(page, config, siteData));
+  issues.push(...runPageChecks(page, config, siteData))
 }
 
 // Check for duplicates
-issues.push(...checkDuplicates(siteData, config));
+issues.push(...checkDuplicates(siteData, config))
 
-console.log(`Found ${issues.length} SEO issues`);
+console.log(`Found ${issues.length} SEO issues`)
 ```
 
 ## Rules Categories
@@ -119,12 +119,15 @@ The checker includes 1000+ rules across these categories:
 ## Output Formats
 
 ### Console (default)
+
 Colored terminal output grouped by category with severity indicators.
 
 ### JSON
+
 Machine-readable JSON with all issues and statistics.
 
 ### SARIF
+
 Static Analysis Results Interchange Format for CI/CD integration.
 
 ## License
