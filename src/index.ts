@@ -18,6 +18,7 @@ export {
   checkInternationalSEO,
   checkLinks,
   checkMetadata,
+  checkOrphanPages,
   checkRobotsTxt,
   checkSitemap,
   checkSocialTags,

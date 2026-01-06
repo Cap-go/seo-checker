@@ -13952,5 +13952,572 @@
       "jsonld",
       "validation"
     ]
+  },
+  {
+    "id": "SEO01175",
+    "category": "Social Tags",
+    "name": "Missing og:type",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:type (e.g., 'website', 'article') for richer social previews.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01176",
+    "category": "Social Tags",
+    "name": "Invalid og:type value",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use a valid Open Graph type: website, article, book, profile, music.song, music.album, music.playlist, music.radio_station, video.movie, video.episode, video.tv_show, or video.other.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01177",
+    "category": "Social Tags",
+    "name": "og:title too long",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Keep og:title under 60 characters for optimal display on social platforms.",
+    "tags": [
+      "social",
+      "opengraph"
+    ],
+    "threshold": 60
+  },
+  {
+    "id": "SEO01178",
+    "category": "Social Tags",
+    "name": "og:description too long",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Keep og:description under 200 characters for optimal display on social platforms.",
+    "tags": [
+      "social",
+      "opengraph"
+    ],
+    "threshold": 200
+  },
+  {
+    "id": "SEO01179",
+    "category": "Social Tags",
+    "name": "og:description too short",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Aim for at least 50 characters in og:description for better engagement.",
+    "tags": [
+      "social",
+      "opengraph"
+    ],
+    "threshold": 50
+  },
+  {
+    "id": "SEO01180",
+    "category": "Social Tags",
+    "name": "Invalid twitter:card value",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use a valid twitter:card type: summary, summary_large_image, app, or player.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01181",
+    "category": "Social Tags",
+    "name": "twitter:title too long",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Keep twitter:title under 70 characters for optimal display.",
+    "tags": [
+      "social",
+      "twitter"
+    ],
+    "threshold": 70
+  },
+  {
+    "id": "SEO01182",
+    "category": "Social Tags",
+    "name": "twitter:description too long",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Keep twitter:description under 200 characters for optimal display.",
+    "tags": [
+      "social",
+      "twitter"
+    ],
+    "threshold": 200
+  },
+  {
+    "id": "SEO01183",
+    "category": "Social Tags",
+    "name": "twitter:image is relative URL",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use an absolute URL for twitter:image (starting with https://).",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01184",
+    "category": "Social Tags",
+    "name": "twitter:image points to missing file",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Ensure the twitter:image URL points to an existing image file.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01185",
+    "category": "Social Tags",
+    "name": "Missing og:site_name",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:site_name to display your brand name in social previews.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01186",
+    "category": "Social Tags",
+    "name": "Missing og:locale",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:locale (e.g., 'en_US') to specify the content language.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01187",
+    "category": "Social Tags",
+    "name": "Invalid og:locale format",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use proper og:locale format: language_TERRITORY (e.g., 'en_US', 'fr_FR').",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01188",
+    "category": "Social Tags",
+    "name": "og:image dimensions not specified",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:image:width and og:image:height for faster social media rendering.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01189",
+    "category": "Social Tags",
+    "name": "og:image too small for optimal display",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use og:image at least 1200x630 pixels for optimal display on Facebook/LinkedIn.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01190",
+    "category": "Social Tags",
+    "name": "og:url mismatch with canonical",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Ensure og:url matches the canonical URL for consistency.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01191",
+    "category": "Social Tags",
+    "name": "Missing twitter:site",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add twitter:site with your Twitter/X handle (e.g., @yourhandle) for attribution.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01192",
+    "category": "Social Tags",
+    "name": "Invalid twitter:site format",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "twitter:site should be a valid Twitter handle starting with @.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01193",
+    "category": "Social Tags",
+    "name": "Missing twitter:creator",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add twitter:creator with the content author's Twitter handle.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01194",
+    "category": "Social Tags",
+    "name": "Invalid twitter:creator format",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "twitter:creator should be a valid Twitter handle starting with @.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01195",
+    "category": "Social Tags",
+    "name": "og:title matches page title exactly",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Consider customizing og:title for social platforms (can differ from page title).",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01196",
+    "category": "Social Tags",
+    "name": "og:description matches meta description exactly",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Consider customizing og:description for social engagement (can differ from meta description).",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01197",
+    "category": "Social Tags",
+    "name": "og:image uses HTTP instead of HTTPS",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use HTTPS for og:image URL to avoid mixed content warnings.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01198",
+    "category": "Social Tags",
+    "name": "twitter:image uses HTTP instead of HTTPS",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use HTTPS for twitter:image URL to avoid mixed content warnings.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01199",
+    "category": "Social Tags",
+    "name": "Missing og:image:alt",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:image:alt for better accessibility of social previews.",
+    "tags": [
+      "social",
+      "opengraph",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "SEO01200",
+    "category": "Social Tags",
+    "name": "Missing twitter:image:alt",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add twitter:image:alt for better accessibility of Twitter/X cards.",
+    "tags": [
+      "social",
+      "twitter",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "SEO01201",
+    "category": "Social Tags",
+    "name": "Duplicate og:image tags",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Multiple og:image tags detected. While valid, ensure this is intentional.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01202",
+    "category": "Social Tags",
+    "name": "og:url is relative",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use an absolute URL for og:url (starting with https://).",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01203",
+    "category": "Social Tags",
+    "name": "Article missing og:article:published_time",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:article:published_time for article pages to show publish date in previews.",
+    "tags": [
+      "social",
+      "opengraph",
+      "article"
+    ]
+  },
+  {
+    "id": "SEO01204",
+    "category": "Social Tags",
+    "name": "Article missing og:article:author",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Add og:article:author for article pages to attribute content.",
+    "tags": [
+      "social",
+      "opengraph",
+      "article"
+    ]
+  },
+  {
+    "id": "SEO01205",
+    "category": "Social Tags",
+    "name": "Invalid og:image:type",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Use a valid MIME type for og:image:type (e.g., 'image/jpeg', 'image/png', 'image/webp').",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01206",
+    "category": "Social Tags",
+    "name": "og:title is empty",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Provide a meaningful og:title for social sharing.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01207",
+    "category": "Social Tags",
+    "name": "og:description is empty",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Provide a meaningful og:description for social sharing.",
+    "tags": [
+      "social",
+      "opengraph"
+    ]
+  },
+  {
+    "id": "SEO01208",
+    "category": "Social Tags",
+    "name": "twitter:title is empty",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Provide a meaningful twitter:title for Twitter/X cards.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01209",
+    "category": "Social Tags",
+    "name": "twitter:description is empty",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Provide a meaningful twitter:description for Twitter/X cards.",
+    "tags": [
+      "social",
+      "twitter"
+    ]
+  },
+  {
+    "id": "SEO01210",
+    "category": "Social Tags",
+    "name": "og:image:alt is empty",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Provide meaningful alt text for og:image:alt.",
+    "tags": [
+      "social",
+      "opengraph",
+      "accessibility"
+    ]
+  },
+  {
+    "id": "SEO01211",
+    "category": "Accessibility",
+    "name": "Form input missing associated label",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Add a <label> element with matching 'for' attribute, or wrap input in a <label>, or use aria-label/aria-labelledby.",
+    "tags": [
+      "accessibility",
+      "forms"
+    ]
+  },
+  {
+    "id": "SEO01212",
+    "category": "Accessibility",
+    "name": "Form select missing associated label",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Add a <label> element with matching 'for' attribute, or wrap select in a <label>, or use aria-label/aria-labelledby.",
+    "tags": [
+      "accessibility",
+      "forms"
+    ]
+  },
+  {
+    "id": "SEO01213",
+    "category": "Accessibility",
+    "name": "Form textarea missing associated label",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Add a <label> element with matching 'for' attribute, or wrap textarea in a <label>, or use aria-label/aria-labelledby.",
+    "tags": [
+      "accessibility",
+      "forms"
+    ]
+  },
+  {
+    "id": "SEO01214",
+    "category": "Links",
+    "name": "Broken anchor link (href='#id' where id doesn't exist)",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Ensure the target element with the specified ID exists on the page, or update the anchor link.",
+    "tags": [
+      "links",
+      "navigation"
+    ]
+  },
+  {
+    "id": "SEO01215",
+    "category": "Media",
+    "name": "Video element missing poster attribute",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Add a poster attribute with a preview image URL to improve perceived performance and accessibility.",
+    "tags": [
+      "media",
+      "video",
+      "performance"
+    ]
+  },
+  {
+    "id": "SEO01216",
+    "category": "E-E-A-T",
+    "name": "Article missing author information",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Add author information via structured data (Article schema with 'author' field), meta tag (article:author), or visible author byline.",
+    "tags": [
+      "eeat",
+      "trust",
+      "article"
+    ]
+  },
+  {
+    "id": "SEO01217",
+    "category": "Metadata",
+    "name": "Missing favicon",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Add a favicon using <link rel='icon'> or <link rel='shortcut icon'> in the <head>.",
+    "tags": [
+      "presence",
+      "branding"
+    ]
+  },
+  {
+    "id": "SEO01218",
+    "category": "Performance",
+    "name": "Image missing width attribute (CLS indicator)",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Add explicit width attribute to prevent Cumulative Layout Shift (CLS).",
+    "tags": [
+      "performance",
+      "cls",
+      "images"
+    ]
+  },
+  {
+    "id": "SEO01219",
+    "category": "Performance",
+    "name": "Image missing height attribute (CLS indicator)",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Add explicit height attribute to prevent Cumulative Layout Shift (CLS).",
+    "tags": [
+      "performance",
+      "cls",
+      "images"
+    ]
+  },
+  {
+    "id": "SEO01220",
+    "category": "Performance",
+    "name": "Image missing both width and height attributes (CLS indicator)",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Add both width and height attributes to prevent Cumulative Layout Shift (CLS).",
+    "tags": [
+      "performance",
+      "cls",
+      "images"
+    ]
   }
 ]

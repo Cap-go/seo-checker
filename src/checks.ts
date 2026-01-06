@@ -1119,54 +1119,86 @@ export function checkImages(page: PageData, config: SEOCheckerConfig, siteData: 
   return issues
 }
 
+// Valid Open Graph types
+const VALID_OG_TYPES = new Set([
+  'website',
+  'article',
+  'book',
+  'profile',
+  'music.song',
+  'music.album',
+  'music.playlist',
+  'music.radio_station',
+  'video.movie',
+  'video.episode',
+  'video.tv_show',
+  'video.other',
+])
+
+// Valid Twitter card types
+const VALID_TWITTER_CARD_TYPES = new Set([
+  'summary',
+  'summary_large_image',
+  'app',
+  'player',
+])
+
+// Valid image MIME types for og:image:type
+const VALID_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/avif',
+])
+
+// Pattern for valid og:locale format (e.g., en_US, fr_FR)
+const OG_LOCALE_PATTERN = /^[a-z]{2}_[A-Z]{2}$/
+
+// Pattern for valid Twitter handle
+const TWITTER_HANDLE_PATTERN = /^@\w{1,15}$/
+
 /**
  * Check social tags rules
- * SEO00168-00176, SEO00371-00372
+ * SEO00168-00176, SEO00371-00372, SEO01175-01210
  */
 export function checkSocialTags(page: PageData, config: SEOCheckerConfig): SEOIssue[] {
   const issues: SEOIssue[] = []
 
-  // OpenGraph tags
+  // =====================
+  // OpenGraph Basic Tags
+  // =====================
+
+  // SEO00168: Missing og:title
   if (!page.og.title) {
     const issue = createIssue('SEO00168', page)
     if (issue)
       issues.push(issue)
   }
-  if (!page.og.description) {
-    const issue = createIssue('SEO00169', page)
-    if (issue)
-      issues.push(issue)
-  }
-  if (!page.og.image) {
-    const issue = createIssue('SEO00170', page)
-    if (issue)
-      issues.push(issue)
-  }
-  if (!page.og.url) {
-    const issue = createIssue('SEO00171', page)
-    if (issue)
-      issues.push(issue)
-  }
   else {
-    // Domain validation for og:url
-    const domainValidation = validateUrlDomain(page.og.url, config)
-    if (!domainValidation.isValid && domainValidation.issue) {
-      // SEO00422: www when main domain does not use it
-      // SEO00423: missing www when main domain uses it
-      let ruleId: string
-      switch (domainValidation.issue) {
-        case 'www_mismatch':
-          ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO00422' : 'SEO00423'
-          break
-        default:
-          ruleId = '' // Skip for subdomain/wrong_domain - og:url may legitimately differ
+    // SEO01206: og:title is empty
+    if (page.og.title.trim() === '') {
+      const issue = createIssue('SEO01206', page)
+      if (issue)
+        issues.push(issue)
+    }
+    else {
+      // SEO01177/SEO00176: og:title too long (>60 chars)
+      if (page.og.title.length > 60) {
+        const issue = createIssue('SEO01177', page, {
+          element: page.og.title.substring(0, 50),
+          actual: `${page.og.title.length} chars`,
+          expected: '<= 60 chars',
+        })
+        if (issue)
+          issues.push(issue)
       }
 
-      if (ruleId) {
-        const issue = createIssue(ruleId, page, {
-          element: page.og.url,
-          actual: domainValidation.hostname || page.og.url,
-          expected: domainValidation.expectedHostname,
+      // SEO01195: og:title matches page title exactly
+      if (page.title && page.og.title === page.title) {
+        const issue = createIssue('SEO01195', page, {
+          element: page.og.title.substring(0, 50),
         })
         if (issue)
           issues.push(issue)
@@ -1174,52 +1206,405 @@ export function checkSocialTags(page: PageData, config: SEOCheckerConfig): SEOIs
     }
   }
 
-  // Twitter card
-  if (!page.twitter.card) {
-    const issue = createIssue('SEO00172', page)
+  // SEO00169: Missing og:description
+  if (!page.og.description) {
+    const issue = createIssue('SEO00169', page)
     if (issue)
       issues.push(issue)
   }
-  if (!page.twitter.title) {
-    const issue = createIssue('SEO00173', page)
-    if (issue)
-      issues.push(issue)
-  }
-  if (!page.twitter.description) {
-    const issue = createIssue('SEO00174', page)
-    if (issue)
-      issues.push(issue)
-  }
-  if (!page.twitter.image) {
-    const issue = createIssue('SEO00175', page)
-    if (issue)
-      issues.push(issue)
+  else {
+    // SEO01207: og:description is empty
+    if (page.og.description.trim() === '') {
+      const issue = createIssue('SEO01207', page)
+      if (issue)
+        issues.push(issue)
+    }
+    else {
+      // SEO01178: og:description too long (>200 chars)
+      if (page.og.description.length > 200) {
+        const issue = createIssue('SEO01178', page, {
+          element: page.og.description.substring(0, 50),
+          actual: `${page.og.description.length} chars`,
+          expected: '<= 200 chars',
+        })
+        if (issue)
+          issues.push(issue)
+      }
+
+      // SEO01179: og:description too short (<50 chars)
+      if (page.og.description.length < 50) {
+        const issue = createIssue('SEO01179', page, {
+          element: page.og.description.substring(0, 50),
+          actual: `${page.og.description.length} chars`,
+          expected: '>= 50 chars',
+        })
+        if (issue)
+          issues.push(issue)
+      }
+
+      // SEO01196: og:description matches meta description exactly
+      if (page.metaDescription && page.og.description === page.metaDescription) {
+        const issue = createIssue('SEO01196', page, {
+          element: page.og.description.substring(0, 50),
+        })
+        if (issue)
+          issues.push(issue)
+      }
+    }
   }
 
-  // SEO00371: og:image is relative
-  if (page.og.image && !page.og.image.startsWith('http://') && !page.og.image.startsWith('https://')) {
-    const issue = createIssue('SEO00371', page, { element: page.og.image })
+  // SEO00170: Missing og:image
+  if (!page.og.image) {
+    const issue = createIssue('SEO00170', page)
     if (issue)
       issues.push(issue)
   }
+  else {
+    // SEO00371: og:image is relative
+    if (!page.og.image.startsWith('http://') && !page.og.image.startsWith('https://')) {
+      const issue = createIssue('SEO00371', page, { element: page.og.image })
+      if (issue)
+        issues.push(issue)
 
-  // SEO00372: og:image points to missing file
-  if (page.og.image && !page.og.image.startsWith('http://') && !page.og.image.startsWith('https://')) {
-    const resolvedPath = resolveToFilePath(page.og.image, page.relativePath, config.distPath)
-    if (resolvedPath && !fileExists(resolvedPath)) {
-      const issue = createIssue('SEO00372', page, { element: page.og.image })
+      // SEO00372: og:image points to missing file
+      const resolvedPath = resolveToFilePath(page.og.image, page.relativePath, config.distPath)
+      if (resolvedPath && !fileExists(resolvedPath)) {
+        const issue = createIssue('SEO00372', page, { element: page.og.image })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+
+    // SEO01197: og:image uses HTTP instead of HTTPS
+    if (page.og.image.startsWith('http://')) {
+      const issue = createIssue('SEO01197', page, { element: page.og.image })
       if (issue)
         issues.push(issue)
     }
   }
 
-  // Check og:title length
-  if (page.og.title) {
-    if (page.og.title.length > 60) {
-      const issue = createIssue('SEO00176', page, {
-        element: page.og.title.substring(0, 50),
-        actual: `${page.og.title.length} chars`,
-        expected: '<= 60 chars',
+  // SEO00171: Missing og:url
+  if (!page.og.url) {
+    const issue = createIssue('SEO00171', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01202: og:url is relative
+    if (!page.og.url.startsWith('http://') && !page.og.url.startsWith('https://')) {
+      const issue = createIssue('SEO01202', page, { element: page.og.url })
+      if (issue)
+        issues.push(issue)
+    }
+    else {
+      // Domain validation for og:url
+      const domainValidation = validateUrlDomain(page.og.url, config)
+      if (!domainValidation.isValid && domainValidation.issue) {
+        // SEO00422: www when main domain does not use it
+        // SEO00423: missing www when main domain uses it
+        let ruleId: string
+        switch (domainValidation.issue) {
+          case 'www_mismatch':
+            ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO00422' : 'SEO00423'
+            break
+          default:
+            ruleId = '' // Skip for subdomain/wrong_domain - og:url may legitimately differ
+        }
+
+        if (ruleId) {
+          const issue = createIssue(ruleId, page, {
+            element: page.og.url,
+            actual: domainValidation.hostname || page.og.url,
+            expected: domainValidation.expectedHostname,
+          })
+          if (issue)
+            issues.push(issue)
+        }
+      }
+
+      // SEO01190: og:url mismatch with canonical
+      if (page.canonical && page.og.url !== page.canonical) {
+        const issue = createIssue('SEO01190', page, {
+          element: `og:url: ${page.og.url}`,
+          actual: page.og.url,
+          expected: page.canonical,
+        })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+  }
+
+  // SEO01175: Missing og:type
+  if (!page.og.type) {
+    const issue = createIssue('SEO01175', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01176: Invalid og:type value
+    if (!VALID_OG_TYPES.has(page.og.type)) {
+      const issue = createIssue('SEO01176', page, {
+        element: page.og.type,
+        actual: page.og.type,
+        expected: 'website, article, book, profile, or video/music types',
+      })
+      if (issue)
+        issues.push(issue)
+    }
+
+    // Article-specific checks
+    if (page.og.type === 'article') {
+      // SEO01203: Article missing og:article:published_time
+      if (!page.og.articlePublishedTime) {
+        const issue = createIssue('SEO01203', page)
+        if (issue)
+          issues.push(issue)
+      }
+
+      // SEO01204: Article missing og:article:author
+      if (!page.og.articleAuthor) {
+        const issue = createIssue('SEO01204', page)
+        if (issue)
+          issues.push(issue)
+      }
+    }
+  }
+
+  // SEO01185: Missing og:site_name
+  if (!page.og.siteName) {
+    const issue = createIssue('SEO01185', page)
+    if (issue)
+      issues.push(issue)
+  }
+
+  // SEO01186: Missing og:locale
+  if (!page.og.locale) {
+    const issue = createIssue('SEO01186', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01187: Invalid og:locale format
+    if (!OG_LOCALE_PATTERN.test(page.og.locale)) {
+      const issue = createIssue('SEO01187', page, {
+        element: page.og.locale,
+        actual: page.og.locale,
+        expected: 'language_TERRITORY format (e.g., en_US)',
+      })
+      if (issue)
+        issues.push(issue)
+    }
+  }
+
+  // =====================
+  // OpenGraph Image Tags
+  // =====================
+
+  if (page.og.image) {
+    // SEO01188: og:image dimensions not specified
+    if (!page.og.imageWidth || !page.og.imageHeight) {
+      const issue = createIssue('SEO01188', page, { element: page.og.image })
+      if (issue)
+        issues.push(issue)
+    }
+    else {
+      // SEO01189: og:image too small for optimal display
+      const width = Number.parseInt(page.og.imageWidth, 10)
+      const height = Number.parseInt(page.og.imageHeight, 10)
+      if (!Number.isNaN(width) && !Number.isNaN(height)) {
+        if (width < 1200 || height < 630) {
+          const issue = createIssue('SEO01189', page, {
+            element: page.og.image,
+            actual: `${width}x${height}`,
+            expected: '>= 1200x630',
+          })
+          if (issue)
+            issues.push(issue)
+        }
+      }
+    }
+
+    // SEO01199: Missing og:image:alt
+    if (!page.og.imageAlt) {
+      const issue = createIssue('SEO01199', page, { element: page.og.image })
+      if (issue)
+        issues.push(issue)
+    }
+    else if (page.og.imageAlt.trim() === '') {
+      // SEO01210: og:image:alt is empty
+      const issue = createIssue('SEO01210', page, { element: page.og.image })
+      if (issue)
+        issues.push(issue)
+    }
+
+    // SEO01205: Invalid og:image:type
+    if (page.og.imageType && !VALID_IMAGE_MIME_TYPES.has(page.og.imageType)) {
+      const issue = createIssue('SEO01205', page, {
+        element: page.og.imageType,
+        actual: page.og.imageType,
+        expected: 'image/jpeg, image/png, image/gif, image/webp, or image/svg+xml',
+      })
+      if (issue)
+        issues.push(issue)
+    }
+
+    // SEO01201: Duplicate og:image tags
+    if (page.ogImageCount && page.ogImageCount > 1) {
+      const issue = createIssue('SEO01201', page, {
+        actual: `${page.ogImageCount} og:image tags`,
+      })
+      if (issue)
+        issues.push(issue)
+    }
+  }
+
+  // =====================
+  // Twitter Card Tags
+  // =====================
+
+  // SEO00172: Missing twitter:card
+  if (!page.twitter.card) {
+    const issue = createIssue('SEO00172', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01180: Invalid twitter:card value
+    if (!VALID_TWITTER_CARD_TYPES.has(page.twitter.card)) {
+      const issue = createIssue('SEO01180', page, {
+        element: page.twitter.card,
+        actual: page.twitter.card,
+        expected: 'summary, summary_large_image, app, or player',
+      })
+      if (issue)
+        issues.push(issue)
+    }
+  }
+
+  // SEO00173: Missing twitter:title
+  if (!page.twitter.title) {
+    const issue = createIssue('SEO00173', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01208: twitter:title is empty
+    if (page.twitter.title.trim() === '') {
+      const issue = createIssue('SEO01208', page)
+      if (issue)
+        issues.push(issue)
+    }
+    else {
+      // SEO01181: twitter:title too long (>70 chars)
+      if (page.twitter.title.length > 70) {
+        const issue = createIssue('SEO01181', page, {
+          element: page.twitter.title.substring(0, 50),
+          actual: `${page.twitter.title.length} chars`,
+          expected: '<= 70 chars',
+        })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+  }
+
+  // SEO00174: Missing twitter:description
+  if (!page.twitter.description) {
+    const issue = createIssue('SEO00174', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01209: twitter:description is empty
+    if (page.twitter.description.trim() === '') {
+      const issue = createIssue('SEO01209', page)
+      if (issue)
+        issues.push(issue)
+    }
+    else {
+      // SEO01182: twitter:description too long (>200 chars)
+      if (page.twitter.description.length > 200) {
+        const issue = createIssue('SEO01182', page, {
+          element: page.twitter.description.substring(0, 50),
+          actual: `${page.twitter.description.length} chars`,
+          expected: '<= 200 chars',
+        })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+  }
+
+  // SEO00175: Missing twitter:image
+  if (!page.twitter.image) {
+    const issue = createIssue('SEO00175', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01183: twitter:image is relative URL
+    if (!page.twitter.image.startsWith('http://') && !page.twitter.image.startsWith('https://')) {
+      const issue = createIssue('SEO01183', page, { element: page.twitter.image })
+      if (issue)
+        issues.push(issue)
+
+      // SEO01184: twitter:image points to missing file
+      const resolvedPath = resolveToFilePath(page.twitter.image, page.relativePath, config.distPath)
+      if (resolvedPath && !fileExists(resolvedPath)) {
+        const issue = createIssue('SEO01184', page, { element: page.twitter.image })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+
+    // SEO01198: twitter:image uses HTTP instead of HTTPS
+    if (page.twitter.image.startsWith('http://')) {
+      const issue = createIssue('SEO01198', page, { element: page.twitter.image })
+      if (issue)
+        issues.push(issue)
+    }
+
+    // SEO01200: Missing twitter:image:alt
+    if (!page.twitter.imageAlt) {
+      const issue = createIssue('SEO01200', page, { element: page.twitter.image })
+      if (issue)
+        issues.push(issue)
+    }
+  }
+
+  // SEO01191: Missing twitter:site
+  if (!page.twitter.site) {
+    const issue = createIssue('SEO01191', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01192: Invalid twitter:site format
+    if (!TWITTER_HANDLE_PATTERN.test(page.twitter.site)) {
+      const issue = createIssue('SEO01192', page, {
+        element: page.twitter.site,
+        actual: page.twitter.site,
+        expected: '@handle format',
+      })
+      if (issue)
+        issues.push(issue)
+    }
+  }
+
+  // SEO01193: Missing twitter:creator (optional, only notice)
+  if (!page.twitter.creator) {
+    const issue = createIssue('SEO01193', page)
+    if (issue)
+      issues.push(issue)
+  }
+  else {
+    // SEO01194: Invalid twitter:creator format
+    if (!TWITTER_HANDLE_PATTERN.test(page.twitter.creator)) {
+      const issue = createIssue('SEO01194', page, {
+        element: page.twitter.creator,
+        actual: page.twitter.creator,
+        expected: '@handle format',
       })
       if (issue)
         issues.push(issue)
@@ -1655,6 +2040,149 @@ export function checkAccessibility(page: PageData, _config: SEOCheckerConfig): S
       if (issue)
         issues.push(issue)
       break // Only report once per page
+    }
+  }
+
+  // SEO01211-01213: Form inputs without labels
+  for (const input of page.formInputsWithoutLabels) {
+    let ruleId: string
+    switch (input.type) {
+      case 'input':
+        ruleId = 'SEO01211'
+        break
+      case 'select':
+        ruleId = 'SEO01212'
+        break
+      case 'textarea':
+        ruleId = 'SEO01213'
+        break
+    }
+    const element = input.id
+      ? `<${input.type} id="${input.id}">`
+      : input.name
+        ? `<${input.type} name="${input.name}">`
+        : `<${input.type}${input.inputType ? ` type="${input.inputType}"` : ''}>`
+    const issue = createIssue(ruleId, page, { element })
+    if (issue)
+      issues.push(issue)
+  }
+
+  return issues
+}
+
+/**
+ * Check broken anchor links
+ * SEO01214
+ */
+export function checkBrokenAnchors(page: PageData, _config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+  const elementIds = new Set(page.elementIds)
+
+  for (const link of page.links) {
+    // Check for anchor links (href="#something")
+    if (link.href && link.href.startsWith('#') && link.href.length > 1) {
+      const targetId = link.href.slice(1)
+      if (!elementIds.has(targetId)) {
+        const issue = createIssue('SEO01214', page, {
+          element: link.href,
+          actual: `Target id="${targetId}" not found`,
+        })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+  }
+
+  return issues
+}
+
+/**
+ * Check video elements
+ * SEO01215
+ */
+export function checkVideos(page: PageData, _config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+
+  for (const video of page.videos) {
+    // SEO01215: Video missing poster attribute
+    if (!video.poster) {
+      const issue = createIssue('SEO01215', page, {
+        element: video.src || '<video>',
+      })
+      if (issue)
+        issues.push(issue)
+    }
+  }
+
+  return issues
+}
+
+/**
+ * Check E-E-A-T signals (author information on articles)
+ * SEO01216
+ */
+export function checkEEAT(page: PageData, _config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+
+  // SEO01216: Article missing author information
+  if (page.isArticle && !page.hasAuthorInfo) {
+    const issue = createIssue('SEO01216', page)
+    if (issue)
+      issues.push(issue)
+  }
+
+  return issues
+}
+
+/**
+ * Check favicon presence
+ * SEO01217
+ */
+export function checkFavicon(page: PageData, _config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+
+  // SEO01217: Missing favicon
+  if (!page.hasFavicon) {
+    const issue = createIssue('SEO01217', page)
+    if (issue)
+      issues.push(issue)
+  }
+
+  return issues
+}
+
+/**
+ * Check image dimensions for CLS
+ * SEO01218-01220
+ */
+export function checkImageDimensions(page: PageData, _config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+
+  for (const img of page.images) {
+    // Skip data URIs and SVGs (they often don't need explicit dimensions)
+    if (img.src && (img.src.startsWith('data:') || img.src.endsWith('.svg')))
+      continue
+
+    const hasWidth = img.width !== undefined && img.width !== ''
+    const hasHeight = img.height !== undefined && img.height !== ''
+
+    if (!hasWidth && !hasHeight) {
+      // SEO01220: Missing both width and height (error)
+      const issue = createIssue('SEO01220', page, { element: img.src })
+      if (issue)
+        issues.push(issue)
+    }
+    else if (!hasWidth) {
+      // SEO01218: Missing width only (warning)
+      const issue = createIssue('SEO01218', page, { element: img.src })
+      if (issue)
+        issues.push(issue)
+    }
+    else if (!hasHeight) {
+      // SEO01219: Missing height only (warning)
+      const issue = createIssue('SEO01219', page, { element: img.src })
+      if (issue)
+        issues.push(issue)
     }
   }
 
@@ -2262,6 +2790,68 @@ export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEO
 }
 
 /**
+ * Check for orphan pages (pages with no internal links pointing to them)
+ * SEO01175
+ */
+export function checkOrphanPages(siteData: SiteData, config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+
+  // Build a set of all pages that are linked to from other pages
+  const linkedPages = new Set<string>()
+
+  // Go through all pages and collect their internal link targets
+  for (const [, page] of siteData.pages) {
+    for (const link of page.links) {
+      // Only consider internal links
+      if (!link.isInternal)
+        continue
+
+      // Resolve the link to a file path
+      const resolvedPath = resolveToFilePath(link.href, page.relativePath, config.distPath)
+      if (resolvedPath) {
+        // Normalize the path to get the relative path from dist
+        const relativePath = path.relative(config.distPath, resolvedPath)
+        linkedPages.add(relativePath)
+      }
+    }
+  }
+
+  // Check each page to see if it's linked from any other page
+  for (const [filePath, page] of siteData.pages) {
+    // Skip the homepage - it's expected to not have incoming links
+    const isHomePage = page.relativePath === 'index.html'
+      || page.relativePath.match(/^[a-z]{2}(-[A-Z]{2})?\/index\.html$/i) !== null
+
+    if (isHomePage)
+      continue
+
+    // Skip pages that are noindex (they're intentionally not linked)
+    if (page.metaRobots?.toLowerCase().includes('noindex'))
+      continue
+
+    // Check if this page is linked from anywhere
+    if (!linkedPages.has(page.relativePath)) {
+      const rule = getRule('SEO01175')
+      if (rule) {
+        issues.push({
+          ruleId: 'SEO01175',
+          ruleName: rule.name,
+          category: rule.category,
+          severity: rule.severity,
+          file: filePath,
+          relativePath: page.relativePath,
+          element: page.title || page.url,
+          fixHint: rule.fixHint,
+          fingerprint: `SEO01175::${page.relativePath}`,
+        })
+      }
+    }
+  }
+
+  return issues
+}
+
+/**
  * Validate BCP47 language code
  */
 function isValidBCP47(lang: string): boolean {
@@ -2289,8 +2879,11 @@ export function runPageChecks(
   allIssues.push(...checkHeadings(page, config))
   allIssues.push(...checkIndexability(page, config))
   allIssues.push(...checkLinks(page, config))
+  allIssues.push(...checkBrokenAnchors(page, config))
   allIssues.push(...checkUrlHygiene(page, config))
   allIssues.push(...checkImages(page, config, siteData))
+  allIssues.push(...checkImageDimensions(page, config))
+  allIssues.push(...checkVideos(page, config))
   allIssues.push(...checkSocialTags(page, config))
   allIssues.push(...checkInternationalSEO(page, config))
   allIssues.push(...checkStructuredData(page, config))
@@ -2298,6 +2891,8 @@ export function runPageChecks(
   allIssues.push(...checkTemplateHygiene(page, config))
   allIssues.push(...checkAccessibility(page, config))
   allIssues.push(...checkHtmlSemantics(page, config))
+  allIssues.push(...checkFavicon(page, config))
+  allIssues.push(...checkEEAT(page, config))
 
   return allIssues
 }

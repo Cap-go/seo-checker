@@ -145,6 +145,94 @@ export function parseHtmlFile(
     })
   })
 
+  // Extract videos
+  const videos: PageData['videos'] = []
+  $('video').each((_, el) => {
+    const $el = $(el)
+    videos.push({
+      src: $el.attr('src') || $el.find('source').first().attr('src'),
+      poster: $el.attr('poster'),
+    })
+  })
+
+  // Check for favicon
+  const hasFavicon = $('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').length > 0
+
+  // Extract form inputs without labels
+  const formInputsWithoutLabels: PageData['formInputsWithoutLabels'] = []
+  const labelForIds = new Set<string>()
+
+  // Collect all label 'for' attributes
+  $('label[for]').each((_, el) => {
+    const forAttr = $(el).attr('for')
+    if (forAttr)
+      labelForIds.add(forAttr)
+  })
+
+  // Check inputs (except hidden, submit, button, reset, image types)
+  $('input').each((_, el) => {
+    const $el = $(el)
+    const inputType = $el.attr('type') || 'text'
+
+    // Skip inputs that don't need labels
+    if (['hidden', 'submit', 'button', 'reset', 'image'].includes(inputType))
+      return
+
+    const id = $el.attr('id')
+    const hasForLabel = id && labelForIds.has(id)
+    const hasWrappingLabel = $el.closest('label').length > 0
+    const hasAriaLabel = $el.attr('aria-label') && $el.attr('aria-label')!.trim() !== ''
+    const hasAriaLabelledBy = $el.attr('aria-labelledby') && $el.attr('aria-labelledby')!.trim() !== ''
+    const hasTitle = $el.attr('title') && $el.attr('title')!.trim() !== ''
+
+    if (!hasForLabel && !hasWrappingLabel && !hasAriaLabel && !hasAriaLabelledBy && !hasTitle) {
+      formInputsWithoutLabels.push({
+        type: 'input',
+        inputType,
+        id,
+        name: $el.attr('name'),
+      })
+    }
+  })
+
+  // Check selects
+  $('select').each((_, el) => {
+    const $el = $(el)
+    const id = $el.attr('id')
+    const hasForLabel = id && labelForIds.has(id)
+    const hasWrappingLabel = $el.closest('label').length > 0
+    const hasAriaLabel = $el.attr('aria-label') && $el.attr('aria-label')!.trim() !== ''
+    const hasAriaLabelledBy = $el.attr('aria-labelledby') && $el.attr('aria-labelledby')!.trim() !== ''
+    const hasTitle = $el.attr('title') && $el.attr('title')!.trim() !== ''
+
+    if (!hasForLabel && !hasWrappingLabel && !hasAriaLabel && !hasAriaLabelledBy && !hasTitle) {
+      formInputsWithoutLabels.push({
+        type: 'select',
+        id,
+        name: $el.attr('name'),
+      })
+    }
+  })
+
+  // Check textareas
+  $('textarea').each((_, el) => {
+    const $el = $(el)
+    const id = $el.attr('id')
+    const hasForLabel = id && labelForIds.has(id)
+    const hasWrappingLabel = $el.closest('label').length > 0
+    const hasAriaLabel = $el.attr('aria-label') && $el.attr('aria-label')!.trim() !== ''
+    const hasAriaLabelledBy = $el.attr('aria-labelledby') && $el.attr('aria-labelledby')!.trim() !== ''
+    const hasTitle = $el.attr('title') && $el.attr('title')!.trim() !== ''
+
+    if (!hasForLabel && !hasWrappingLabel && !hasAriaLabel && !hasAriaLabelledBy && !hasTitle) {
+      formInputsWithoutLabels.push({
+        type: 'textarea',
+        id,
+        name: $el.attr('name'),
+      })
+    }
+  })
+
   // Extract JSON-LD
   const jsonLd: unknown[] = []
   $('script[type="application/ld+json"]').each((_, el) => {
@@ -192,6 +280,32 @@ export function parseHtmlFile(
     }
   }
 
+  // Determine if page is an article and has author info
+  const ogType = $('meta[property="og:type"]').attr('content')?.trim()
+  const ogArticleAuthor = $('meta[property="article:author"]').attr('content')?.trim()
+  const isArticle = ogType === 'article'
+    || jsonLd.some((data) => {
+      if (typeof data === 'object' && data !== null) {
+        const obj = data as Record<string, unknown>
+        const schemaType = obj['@type']
+        if (Array.isArray(schemaType)) {
+          return schemaType.some(t => ['Article', 'NewsArticle', 'BlogPosting', 'TechArticle', 'ScholarlyArticle'].includes(t as string))
+        }
+        return ['Article', 'NewsArticle', 'BlogPosting', 'TechArticle', 'ScholarlyArticle'].includes(schemaType as string)
+      }
+      return false
+    })
+
+  // Check for author info in various places
+  const hasAuthorInSchema = jsonLd.some((data) => {
+    if (typeof data === 'object' && data !== null) {
+      const obj = data as Record<string, unknown>
+      return 'author' in obj && obj.author !== null && obj.author !== undefined
+    }
+    return false
+  })
+  const hasAuthorInfo = !!(ogArticleAuthor || hasAuthorInSchema)
+
   return {
     filePath,
     relativePath,
@@ -216,16 +330,33 @@ export function parseHtmlFile(
       image: $('meta[property="og:image"]').attr('content')?.trim(),
       url: $('meta[property="og:url"]').attr('content')?.trim(),
       type: $('meta[property="og:type"]').attr('content')?.trim(),
+      siteName: $('meta[property="og:site_name"]').attr('content')?.trim(),
+      locale: $('meta[property="og:locale"]').attr('content')?.trim(),
+      imageWidth: $('meta[property="og:image:width"]').attr('content')?.trim(),
+      imageHeight: $('meta[property="og:image:height"]').attr('content')?.trim(),
+      imageAlt: $('meta[property="og:image:alt"]').attr('content')?.trim(),
+      imageType: $('meta[property="og:image:type"]').attr('content')?.trim(),
+      articlePublishedTime: $('meta[property="article:published_time"]').attr('content')?.trim(),
+      articleAuthor: $('meta[property="article:author"]').attr('content')?.trim(),
     },
     twitter: {
       card: $('meta[name="twitter:card"]').attr('content')?.trim(),
       title: $('meta[name="twitter:title"]').attr('content')?.trim(),
       description: $('meta[name="twitter:description"]').attr('content')?.trim(),
       image: $('meta[name="twitter:image"]').attr('content')?.trim(),
+      site: $('meta[name="twitter:site"]').attr('content')?.trim(),
+      creator: $('meta[name="twitter:creator"]').attr('content')?.trim(),
+      imageAlt: $('meta[name="twitter:image:alt"]').attr('content')?.trim(),
     },
+    ogImageCount: $('meta[property="og:image"]').length,
     hreflangs,
     links,
     images,
+    videos,
+    formInputsWithoutLabels,
+    hasFavicon,
+    isArticle,
+    hasAuthorInfo,
     jsonLd,
     wordCount,
     hasDoctype: html.slice(0, 100).toLowerCase().includes('<!doctype html'),

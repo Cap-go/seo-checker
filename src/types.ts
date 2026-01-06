@@ -127,6 +127,14 @@ export interface PageData {
     image?: string
     url?: string
     type?: string
+    siteName?: string
+    locale?: string
+    imageWidth?: string
+    imageHeight?: string
+    imageAlt?: string
+    imageType?: string
+    articlePublishedTime?: string
+    articleAuthor?: string
   }
   /** Twitter card tags */
   twitter: {
@@ -134,7 +142,12 @@ export interface PageData {
     title?: string
     description?: string
     image?: string
+    site?: string
+    creator?: string
+    imageAlt?: string
   }
+  /** Raw HTML for social meta tag counting */
+  ogImageCount?: number
   /** Hreflang links */
   hreflangs: { lang: string, url: string }[]
   /** All links on page */
@@ -157,6 +170,26 @@ export interface PageData {
     height?: string
     line?: number
   }[]
+  /** All video elements on page */
+  videos: {
+    src?: string
+    poster?: string
+    line?: number
+  }[]
+  /** Form inputs without labels */
+  formInputsWithoutLabels: {
+    type: 'input' | 'select' | 'textarea'
+    inputType?: string
+    id?: string
+    name?: string
+    line?: number
+  }[]
+  /** Whether the page has a favicon */
+  hasFavicon: boolean
+  /** Whether page is an article (has article schema or og:type=article) */
+  isArticle: boolean
+  /** Whether article has author information */
+  hasAuthorInfo: boolean
   /** JSON-LD structured data */
   jsonLd: unknown[]
   /** Main content word count */
