@@ -4,6 +4,9 @@
  */
 
 import type { PageData, SEOCheckerConfig, SiteData } from './types.js'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import { describe, expect, it } from 'bun:test'
 import {
   checkAccessibility,
@@ -24,6 +27,8 @@ import {
   checkLinks,
   checkMetadata,
   checkOrphanPages,
+  checkRobotsTxt,
+  checkSitemap,
   checkSocialTags,
   checkStructuredData,
   checkTemplateHygiene,
@@ -2822,5 +2827,934 @@ describe('H2 length checks', () => {
     })
     const issues = checkContentLength(page, config)
     expect(hasIssue(issues, 'SEO00043')).toBe(true)
+  })
+})
+
+// ========================================
+// Tests for robots.txt checks (SEO01153-01157, SEO01165-01168)
+// ========================================
+
+describe('checkRobotsTxt', () => {
+  // Helper to create a temp directory with files for testing
+  function createTempDir(): string {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-test-'))
+    return tempDir
+  }
+
+  function cleanupTempDir(dir: string): void {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+
+  describe('SEO01153: Missing robots.txt', () => {
+    it('should trigger when robots.txt is missing', () => {
+      const tempDir = createTempDir()
+      try {
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01153')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when robots.txt exists', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01153')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01154: Syntax error in robots.txt', () => {
+    it('should trigger for lines without colon', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nInvalid line without colon\nAllow: /')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01154')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger for valid robots.txt syntax', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01154')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01155: Missing Sitemap directive', () => {
+    it('should trigger when no Sitemap directive', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01155')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when Sitemap directive exists', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01155')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01156: Blocks all crawlers', () => {
+    it('should trigger when Disallow: / is present', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nDisallow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01156')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when Disallow: / is not present', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01156')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01157: Sitemap URL domain mismatch', () => {
+    it('should trigger when sitemap URL has different domain', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://other-domain.com/sitemap.xml')
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01157')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01165: Sitemap in robots.txt does not exist', () => {
+    it('should trigger when referenced sitemap file is missing', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        // Note: not creating sitemap.xml
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01165')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when referenced sitemap file exists', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01165')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01166: Sitemap URL uses www when main domain does not', () => {
+    it('should trigger when sitemap has www but baseUrl does not', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://www.example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01166')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01167: Sitemap URL missing www when main domain uses it', () => {
+    it('should trigger when sitemap lacks www but baseUrl has it', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://www.example.com' })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01167')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01168: Sitemap URL uses different subdomain', () => {
+    it('should trigger when sitemap uses a different subdomain', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://blog.example.com/sitemap.xml')
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset></urlset>')
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const issues = checkRobotsTxt(config)
+        expect(hasIssue(issues, 'SEO01168')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+})
+
+// ========================================
+// Tests for sitemap.xml checks (SEO01158-01164, SEO01169-01171)
+// ========================================
+
+describe('checkSitemap', () => {
+  function createTempDir(): string {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-test-'))
+    return tempDir
+  }
+
+  function cleanupTempDir(dir: string): void {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+
+  describe('SEO01158: Missing sitemap', () => {
+    it('should trigger when sitemap.xml is missing', () => {
+      const tempDir = createTempDir()
+      try {
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01158')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when sitemap.xml exists', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), '<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>')
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01158')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01159: Invalid XML in sitemap', () => {
+    it('should trigger for non-XML sitemap content', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), 'This is not XML')
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01159')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01160: URL references non-existent page', () => {
+    it('should trigger when sitemap URL points to missing page', () => {
+      const tempDir = createTempDir()
+      try {
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/missing-page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01160')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when sitemap URL points to existing page', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'existing-page'))
+        fs.writeFileSync(path.join(tempDir, 'existing-page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/existing-page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01160')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01161: HTTP instead of HTTPS in sitemap', () => {
+    it('should trigger when sitemap uses HTTP but baseUrl is HTTPS', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>http://example.com/page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01161')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01162: Duplicate URLs in sitemap', () => {
+    it('should trigger for duplicate URLs', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/page/</loc></url>
+  <url><loc>https://example.com/page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01162')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01163: Invalid lastmod date', () => {
+    it('should trigger for invalid date format', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/page/</loc><lastmod>invalid-date</lastmod></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01163')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger for valid ISO 8601 date', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/page/</loc><lastmod>2024-01-15</lastmod></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01163')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger for valid ISO 8601 datetime with timezone', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/page/</loc><lastmod>2024-01-15T10:30:00+00:00</lastmod></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01163')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01164: Trailing slash inconsistency', () => {
+    it('should trigger when URLs have mixed trailing slash usage', () => {
+      const tempDir = createTempDir()
+      try {
+        // Create directories for the pages
+        for (let i = 1; i <= 10; i++) {
+          fs.mkdirSync(path.join(tempDir, `page${i}`))
+          fs.writeFileSync(path.join(tempDir, `page${i}`, 'index.html'), '<html></html>')
+        }
+        // Mix of trailing slash and no trailing slash (more than 10% each)
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/page1/</loc></url>
+  <url><loc>https://example.com/page2/</loc></url>
+  <url><loc>https://example.com/page3/</loc></url>
+  <url><loc>https://example.com/page4/</loc></url>
+  <url><loc>https://example.com/page5/</loc></url>
+  <url><loc>https://example.com/page6</loc></url>
+  <url><loc>https://example.com/page7</loc></url>
+  <url><loc>https://example.com/page8</loc></url>
+  <url><loc>https://example.com/page9</loc></url>
+  <url><loc>https://example.com/page10</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01164')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01169: Sitemap URL uses www when main domain does not', () => {
+    it('should trigger when sitemap URL has www but baseUrl does not', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.example.com/page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01169')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01170: Sitemap URL missing www when main domain uses it', () => {
+    it('should trigger when sitemap URL lacks www but baseUrl has it', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://www.example.com' })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01170')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01171: Sitemap URL uses different subdomain', () => {
+    it('should trigger when sitemap URL uses different subdomain', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'page'))
+        fs.writeFileSync(path.join(tempDir, 'page', 'index.html'), '<html></html>')
+        const sitemapContent = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://blog.example.com/page/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01171')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+})
+
+// ========================================
+// Tests for Schema edge cases (SEO00176, SEO00359, SEO00360, SEO00373, SEO00398)
+// ========================================
+
+describe('Schema edge cases', () => {
+  const config = createConfig()
+
+  describe('SEO01177/SEO00176: og:title too long', () => {
+    it('should trigger when og:title > 60 chars', () => {
+      const page = createPageData({
+        og: {
+          title: 'A'.repeat(65),
+          description: 'Valid description that is at least 50 characters long for testing',
+          image: 'https://example.com/image.jpg',
+        },
+      })
+      const issues = checkSocialTags(page, config)
+      expect(hasIssue(issues, 'SEO01177')).toBe(true)
+    })
+
+    it('should not trigger when og:title <= 60 chars', () => {
+      const page = createPageData({
+        og: {
+          title: 'A'.repeat(60),
+          description: 'Valid description that is at least 50 characters long for testing',
+          image: 'https://example.com/image.jpg',
+        },
+      })
+      const issues = checkSocialTags(page, config)
+      expect(hasIssue(issues, 'SEO01177')).toBe(false)
+    })
+  })
+
+  describe('SEO00359: BreadcrumbList itemListElement is not an array', () => {
+    it('should trigger when itemListElement is not an array', () => {
+      const page = createPageData({
+        jsonLd: [{
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': 'not an array',
+        }],
+      })
+      const issues = checkStructuredData(page, config)
+      expect(hasIssue(issues, 'SEO00359')).toBe(true)
+    })
+
+    it('should not trigger when itemListElement is an array', () => {
+      const page = createPageData({
+        jsonLd: [{
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://example.com/' },
+          ],
+        }],
+      })
+      const issues = checkStructuredData(page, config)
+      expect(hasIssue(issues, 'SEO00359')).toBe(false)
+    })
+  })
+
+  describe('SEO00360: BreadcrumbList item missing position', () => {
+    it('should trigger when ListItem is missing position', () => {
+      const page = createPageData({
+        jsonLd: [{
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            { '@type': 'ListItem', 'name': 'Home', 'item': 'https://example.com/' },
+          ],
+        }],
+      })
+      const issues = checkStructuredData(page, config)
+      expect(hasIssue(issues, 'SEO00360')).toBe(true)
+    })
+
+    it('should not trigger when ListItem has position', () => {
+      const page = createPageData({
+        jsonLd: [{
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://example.com/' },
+          ],
+        }],
+      })
+      const issues = checkStructuredData(page, config)
+      expect(hasIssue(issues, 'SEO00360')).toBe(false)
+    })
+
+    it('should trigger for multiple ListItems missing position', () => {
+      const page = createPageData({
+        jsonLd: [{
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            { '@type': 'ListItem', 'name': 'Home', 'item': 'https://example.com/' },
+            { '@type': 'ListItem', 'name': 'Products', 'item': 'https://example.com/products' },
+            { '@type': 'ListItem', 'position': 3, 'name': 'Item', 'item': 'https://example.com/products/item' },
+          ],
+        }],
+      })
+      const issues = checkStructuredData(page, config)
+      const positionIssues = issues.filter(i => i.ruleId === 'SEO00360')
+      expect(positionIssues.length).toBe(2)
+    })
+  })
+
+  describe('SEO00373: URL hygiene - session IDs in URLs', () => {
+    it('SEO00374: should trigger for session ID parameters', () => {
+      const page = createPageData({
+        links: [
+          { href: '/page?sid=abc123', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00374')).toBe(true)
+    })
+
+    it('SEO00374: should trigger for sessionid parameter', () => {
+      const page = createPageData({
+        links: [
+          { href: '/page?sessionid=abc123', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00374')).toBe(true)
+    })
+
+    it('SEO00374: should trigger for PHPSESSID parameter', () => {
+      const page = createPageData({
+        links: [
+          { href: '/page?PHPSESSID=abc123', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00374')).toBe(true)
+    })
+
+    it('SEO00374: should trigger for JSESSIONID parameter', () => {
+      const page = createPageData({
+        links: [
+          { href: '/page?jsessionid=abc123', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00374')).toBe(true)
+    })
+
+    it('SEO00375: should trigger for .php? URLs', () => {
+      const page = createPageData({
+        links: [
+          { href: '/page.php?id=123', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00375')).toBe(true)
+    })
+
+    it('SEO00376: should trigger for ?page= URLs', () => {
+      const page = createPageData({
+        links: [
+          { href: '/index?page=2', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00376')).toBe(true)
+    })
+
+    it('SEO00377: should trigger for ?p= URLs', () => {
+      const page = createPageData({
+        links: [
+          { href: '/index?p=123', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00377')).toBe(true)
+    })
+
+    it('SEO00378: should trigger for ?id= URLs', () => {
+      const page = createPageData({
+        links: [
+          { href: '/index?id=456', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00378')).toBe(true)
+    })
+
+    it('should not trigger for clean URLs', () => {
+      const page = createPageData({
+        links: [
+          { href: '/products/category/item', text: 'Link', isInternal: true, isExternal: false },
+        ],
+      })
+      const issues = checkUrlHygiene(page, config)
+      expect(hasIssue(issues, 'SEO00374')).toBe(false)
+      expect(hasIssue(issues, 'SEO00375')).toBe(false)
+      expect(hasIssue(issues, 'SEO00376')).toBe(false)
+      expect(hasIssue(issues, 'SEO00377')).toBe(false)
+      expect(hasIssue(issues, 'SEO00378')).toBe(false)
+    })
+  })
+
+  describe('SEO00398/SEO00410-00412: Accessibility checks', () => {
+    it('SEO00410: should trigger for empty aria-label', () => {
+      const page = createPageData({
+        html: '<!DOCTYPE html><html><body><button aria-label="">Click</button></body></html>',
+      })
+      const issues = checkAccessibility(page, config)
+      expect(hasIssue(issues, 'SEO00410')).toBe(true)
+    })
+
+    it('SEO00412: should trigger for role="img" without aria-label', () => {
+      const page = createPageData({
+        html: '<!DOCTYPE html><html><body><div role="img"></div></body></html>',
+      })
+      const issues = checkAccessibility(page, config)
+      expect(hasIssue(issues, 'SEO00412')).toBe(true)
+    })
+
+    it('SEO00412: should not trigger for role="img" with aria-label', () => {
+      const page = createPageData({
+        html: '<!DOCTYPE html><html><body><div role="img" aria-label="Description"></div></body></html>',
+      })
+      const issues = checkAccessibility(page, config)
+      expect(hasIssue(issues, 'SEO00412')).toBe(false)
+    })
+
+    it('SEO00412: should not trigger for role="img" with aria-labelledby', () => {
+      const page = createPageData({
+        html: '<!DOCTYPE html><html><body><span id="desc">Description</span><div role="img" aria-labelledby="desc"></div></body></html>',
+      })
+      const issues = checkAccessibility(page, config)
+      expect(hasIssue(issues, 'SEO00412')).toBe(false)
+    })
+  })
+})
+
+// ========================================
+// Tests for SEO00106/SEO00107 (noindex with sitemap/links)
+// Note: These rules require sitemap/link graph data which is not
+// available in the current implementation. The comments in code say
+// "would need sitemap data" and "would need link graph".
+// These tests document the expected behavior when implemented.
+// ========================================
+
+describe('Noindex edge cases (SEO00106/SEO00107)', () => {
+  const config = createConfig()
+
+  describe('SEO00106: Page has noindex but is in sitemap', () => {
+    it('should be documented as requiring sitemap data integration', () => {
+      // This rule checks if a page with noindex is also included in the sitemap
+      // Currently commented out in checks.ts as it requires sitemap data
+      // When implemented, it would:
+      // 1. Parse the sitemap to get list of URLs
+      // 2. Check each page with noindex directive
+      // 3. Flag if the noindex page appears in sitemap
+      const page = createPageData({
+        metaRobots: 'noindex, follow',
+      })
+      const issues = checkIndexability(page, config)
+      // Currently this does not trigger SEO00106 as it needs sitemap data
+      // This test documents the expected future behavior
+      expect(Array.isArray(issues)).toBe(true)
+    })
+  })
+
+  describe('SEO00107: Page has noindex but has incoming internal links', () => {
+    it('should be documented as requiring link graph data', () => {
+      // This rule checks if a page with noindex has internal links pointing to it
+      // Currently commented out in checks.ts as it requires link graph
+      // When implemented, it would:
+      // 1. Build a link graph of all internal links
+      // 2. Check each page with noindex directive
+      // 3. Flag if other pages link to the noindex page
+      const page = createPageData({
+        metaRobots: 'noindex, follow',
+      })
+      const issues = checkIndexability(page, config)
+      // Currently this does not trigger SEO00107 as it needs link graph
+      // This test documents the expected future behavior
+      expect(Array.isArray(issues)).toBe(true)
+    })
+  })
+})
+
+// ========================================
+// Additional title length boundary tests (SEO00019)
+// ========================================
+
+describe('Title length boundary tests', () => {
+  const config = createConfig()
+
+  describe('SEO00019: Title length edge cases', () => {
+    it('should handle title at exact boundary of 30 chars (no issue)', () => {
+      const page = createPageData({ title: 'A'.repeat(30) })
+      const issues = checkContentLength(page, config)
+      expect(hasIssue(issues, 'SEO00013')).toBe(false)
+      expect(hasIssue(issues, 'SEO00014')).toBe(false)
+      expect(hasIssue(issues, 'SEO00015')).toBe(false)
+    })
+
+    it('should handle title at 29 chars (triggers SEO00015)', () => {
+      const page = createPageData({ title: 'A'.repeat(29) })
+      const issues = checkContentLength(page, config)
+      expect(hasIssue(issues, 'SEO00015')).toBe(true)
+    })
+  })
+})
+
+// ========================================
+// Additional H2 length tests (SEO00041)
+// ========================================
+
+describe('H2 length boundary tests', () => {
+  const config = createConfig()
+
+  describe('SEO00041-00043: H2 too long', () => {
+    it('should not trigger for H2 at exactly 80 chars', () => {
+      const page = createPageData({ h2s: ['A'.repeat(80)] })
+      const issues = checkContentLength(page, config)
+      expect(hasIssue(issues, 'SEO00043')).toBe(false)
+    })
+
+    it('should trigger SEO00043 for H2 at 81 chars', () => {
+      const page = createPageData({ h2s: ['A'.repeat(81)] })
+      const issues = checkContentLength(page, config)
+      expect(hasIssue(issues, 'SEO00043')).toBe(true)
+    })
+  })
+})
+
+// ========================================
+// Additional description length tests (SEO00055)
+// ========================================
+
+describe('Description length boundary tests', () => {
+  const config = createConfig()
+
+  describe('SEO00055: Description boundary tests', () => {
+    it('should handle description at exactly 120 chars (optimal, no short issues)', () => {
+      const page = createPageData({ metaDescription: 'A'.repeat(120) })
+      const issues = checkContentLength(page, config)
+      expect(hasIssue(issues, 'SEO00023')).toBe(false)
+      expect(hasIssue(issues, 'SEO00024')).toBe(false)
+      expect(hasIssue(issues, 'SEO00025')).toBe(false)
+      expect(hasIssue(issues, 'SEO00026')).toBe(false)
+    })
+
+    it('should handle description at exactly 160 chars (optimal max, no long issues)', () => {
+      const page = createPageData({ metaDescription: 'A'.repeat(160) })
+      const issues = checkContentLength(page, config)
+      expect(hasIssue(issues, 'SEO00027')).toBe(false)
+      expect(hasIssue(issues, 'SEO00028')).toBe(false)
+      expect(hasIssue(issues, 'SEO00029')).toBe(false)
+    })
+  })
+})
+
+// ========================================
+// Additional pipe separator tests (SEO00072-00074)
+// ========================================
+
+describe('Pipe separator tests', () => {
+  const config = createConfig()
+
+  describe('SEO00072-00074: Pipe separator count', () => {
+    it('should not trigger for title with 1 pipe', () => {
+      const page = createPageData({ title: 'Page Title | Brand Name Here' })
+      const issues = checkContentFormat(page, config)
+      expect(hasIssue(issues, 'SEO00073')).toBe(false)
+      expect(hasIssue(issues, 'SEO00074')).toBe(false)
+    })
+
+    it('SEO00073: should trigger for title with exactly 2 pipes', () => {
+      const page = createPageData({ title: 'Page | Section | Brand' })
+      const issues = checkContentFormat(page, config)
+      expect(hasIssue(issues, 'SEO00073')).toBe(true)
+      expect(hasIssue(issues, 'SEO00074')).toBe(false)
+    })
+
+    it('SEO00074: should trigger for title with 3 pipes', () => {
+      const page = createPageData({ title: 'A | B | C | D' })
+      const issues = checkContentFormat(page, config)
+      expect(hasIssue(issues, 'SEO00074')).toBe(true)
+    })
+
+    it('SEO00074: should trigger for title with 4+ pipes', () => {
+      const page = createPageData({ title: 'A | B | C | D | E' })
+      const issues = checkContentFormat(page, config)
+      expect(hasIssue(issues, 'SEO00074')).toBe(true)
+    })
   })
 })
