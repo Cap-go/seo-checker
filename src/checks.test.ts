@@ -10,9 +10,12 @@ import {
   checkContentFormat,
   checkContentLength,
   checkContentQuality,
+  checkEEAT,
+  checkFavicon,
   checkHeadings,
   checkHtmlSemantics,
   checkHtmlValidity,
+  checkImageDimensions,
   checkImages,
   checkIndexability,
   checkInternationalSEO,
@@ -20,7 +23,9 @@ import {
   checkMetadata,
   checkSocialTags,
   checkStructuredData,
+  checkTemplateHygiene,
   checkUrlHygiene,
+  checkVideos,
 } from './checks.js'
 
 // Helper to create minimal site data
@@ -1661,5 +1666,513 @@ describe('Additional accessibility checks', () => {
       const issues = checkAccessibility(page, config)
       expect(hasIssue(issues, 'SEO00412')).toBe(true)
     })
+  })
+})
+
+// ========================================
+// Additional tests for remaining untested rules
+// ========================================
+
+describe('Generic anchor text checks (SEO00136-SEO00142)', () => {
+  const config = createConfig()
+
+  it('SEO00136: should trigger for "click here" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'click here', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00136')).toBe(true)
+  })
+
+  it('SEO00137: should trigger for "read more" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'read more', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00137')).toBe(true)
+  })
+
+  it('SEO00138: should trigger for "learn more" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'learn more', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00138')).toBe(true)
+  })
+
+  it('SEO00139: should trigger for "here" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'here', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00139')).toBe(true)
+  })
+
+  it('SEO00140: should trigger for "more" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'more', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00140')).toBe(true)
+  })
+
+  it('SEO00141: should trigger for "link" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'link', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00141')).toBe(true)
+  })
+
+  it('SEO00142: should trigger for "this" anchor text', () => {
+    const page = createPageData({
+      links: [{ href: '/page', text: 'this', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00142')).toBe(true)
+  })
+})
+
+describe('Additional link checks', () => {
+  const config = createConfig()
+
+  it('SEO00146: should trigger for tel: link missing phone number', () => {
+    const page = createPageData({
+      links: [{ href: 'tel:', text: 'Call us', isInternal: false, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00146')).toBe(true)
+  })
+
+  it('SEO00149: should trigger for uppercase letters in URL path', () => {
+    const page = createPageData({
+      links: [{ href: '/Products/Item', text: 'Link', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00149')).toBe(true)
+  })
+
+  it('SEO00151: should trigger for trailing punctuation in URL', () => {
+    const page = createPageData({
+      links: [{ href: '/page.', text: 'Link', isInternal: true, isExternal: false }],
+    })
+    const issues = checkLinks(page, config)
+    expect(hasIssue(issues, 'SEO00151')).toBe(true)
+  })
+})
+
+describe('Additional image checks', () => {
+  const config = createConfig()
+  const siteData = createSiteData()
+
+  it('SEO00158: should trigger when alt text is just filename (without extension)', () => {
+    const page = createPageData({
+      images: [{ src: '/my-image.jpg', alt: 'my image' }], // alt matches filename minus extension with - replaced by space
+    })
+    const issues = checkImages(page, config, siteData)
+    expect(hasIssue(issues, 'SEO00158')).toBe(true)
+  })
+})
+
+describe('Additional social tag checks', () => {
+  const config = createConfig()
+
+  it('SEO01176: should trigger for invalid og:type value', () => {
+    const page = createPageData({
+      og: {
+        title: 'Title',
+        description: 'A long enough description for validation',
+        image: 'https://example.com/img.jpg',
+        url: 'https://example.com/',
+        type: 'invalid_type',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01176')).toBe(true)
+  })
+
+  it('SEO01180: should trigger for invalid twitter:card value', () => {
+    const page = createPageData({
+      twitter: { card: 'invalid_card' },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01180')).toBe(true)
+  })
+
+  it('SEO01187: should trigger for invalid og:locale format', () => {
+    const page = createPageData({
+      og: {
+        title: 'Title',
+        description: 'A long enough description for validation',
+        image: 'https://example.com/img.jpg',
+        url: 'https://example.com/',
+        type: 'website',
+        siteName: 'Site',
+        locale: 'invalid',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01187')).toBe(true)
+  })
+
+  it('SEO01192: should trigger for invalid twitter:site format', () => {
+    const page = createPageData({
+      twitter: {
+        card: 'summary',
+        title: 'Title',
+        description: 'Desc',
+        image: 'https://example.com/img.jpg',
+        site: 'invalid_no_at',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01192')).toBe(true)
+  })
+
+  it('SEO01195: should trigger when og:title matches page title exactly', () => {
+    const page = createPageData({
+      title: 'Same Title',
+      og: { title: 'Same Title' },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01195')).toBe(true)
+  })
+
+  it('SEO01196: should trigger when og:description matches meta description exactly', () => {
+    const page = createPageData({
+      metaDescription: 'Same description that is long enough for validation here',
+      og: {
+        title: 'Title',
+        description: 'Same description that is long enough for validation here',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01196')).toBe(true)
+  })
+
+  it('SEO01197: should trigger when og:image uses HTTP instead of HTTPS', () => {
+    const page = createPageData({
+      og: {
+        title: 'Title',
+        description: 'A long enough description for validation',
+        image: 'http://example.com/img.jpg',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01197')).toBe(true)
+  })
+
+  it('SEO01198: should trigger when twitter:image uses HTTP instead of HTTPS', () => {
+    const page = createPageData({
+      twitter: {
+        card: 'summary',
+        title: 'Title',
+        description: 'Desc',
+        image: 'http://example.com/img.jpg',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01198')).toBe(true)
+  })
+
+  it('SEO01200: should trigger when twitter:image:alt is missing (twitter:image present)', () => {
+    const page = createPageData({
+      twitter: {
+        card: 'summary',
+        title: 'Title',
+        description: 'Desc',
+        image: 'https://example.com/img.jpg',
+        site: '@example',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01200')).toBe(true)
+  })
+
+  it('SEO01202: should trigger when og:url is relative', () => {
+    const page = createPageData({
+      og: {
+        title: 'Title',
+        description: 'A long enough description for validation',
+        image: 'https://example.com/img.jpg',
+        url: '/page',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01202')).toBe(true)
+  })
+
+  it('SEO01206: should trigger when og:title is whitespace only', () => {
+    const page = createPageData({
+      og: { title: '   ' }, // whitespace-only triggers SEO01206 (empty string triggers SEO00168)
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01206')).toBe(true)
+  })
+
+  it('SEO01207: should trigger when og:description is whitespace only', () => {
+    const page = createPageData({
+      og: { title: 'Title', description: '   ' },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01207')).toBe(true)
+  })
+
+  it('SEO01208: should trigger when twitter:title is whitespace only', () => {
+    const page = createPageData({
+      twitter: { card: 'summary', title: '   ' },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01208')).toBe(true)
+  })
+
+  it('SEO01209: should trigger when twitter:description is whitespace only', () => {
+    const page = createPageData({
+      twitter: { card: 'summary', title: 'Title', description: '   ' },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01209')).toBe(true)
+  })
+
+  it('SEO01210: should trigger when og:image:alt is whitespace only', () => {
+    const page = createPageData({
+      og: {
+        title: 'Title',
+        description: 'A long enough description for validation',
+        image: 'https://example.com/img.jpg',
+        url: 'https://example.com/',
+        type: 'website',
+        siteName: 'Site',
+        locale: 'en_US',
+        imageWidth: '1200',
+        imageHeight: '630',
+        imageAlt: '   ',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01210')).toBe(true)
+  })
+})
+
+describe('Additional international SEO checks', () => {
+  const config = createConfig({ languages: ['en', 'es', 'fr'] })
+
+  it('SEO00178: should trigger for duplicate hreflang language codes', () => {
+    const page = createPageData({
+      url: 'https://example.com/',
+      hreflangs: [
+        { lang: 'en', url: 'https://example.com/en' },
+        { lang: 'en', url: 'https://example.com/en-alt' },
+      ],
+    })
+    const issues = checkInternationalSEO(page, config)
+    expect(hasIssue(issues, 'SEO00178')).toBe(true)
+  })
+})
+
+describe('Additional structured data checks', () => {
+  const config = createConfig()
+
+  it('SEO00229: should trigger for invalid JSON-LD (with parse error)', () => {
+    const page = createPageData({
+      jsonLd: [{ _parseError: 'Invalid JSON syntax' }], // Parser adds _parseError for invalid JSON
+    })
+    const issues = checkStructuredData(page, config)
+    expect(hasIssue(issues, 'SEO00229')).toBe(true)
+  })
+})
+
+describe('Template hygiene - placeholder content', () => {
+  const config = createConfig()
+
+  it('SEO00382: should trigger for lorem ipsum in title', () => {
+    const page = createPageData({
+      title: 'Lorem ipsum dolor sit amet',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00382')).toBe(true)
+  })
+
+  it('SEO00386: should trigger for TODO in title', () => {
+    const page = createPageData({
+      title: 'TODO: Add real title here',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00386')).toBe(true)
+  })
+
+  it('SEO00390: should trigger for FIXME in title', () => {
+    const page = createPageData({
+      title: 'FIXME: This needs updating',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00390')).toBe(true)
+  })
+
+  it('SEO00394: should trigger for untitled page', () => {
+    const page = createPageData({
+      title: 'Untitled',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00394')).toBe(true)
+  })
+
+  it('SEO00383: should trigger for lorem ipsum in description', () => {
+    // Note: 382 + 1 = 383 for description
+    const page = createPageData({
+      metaDescription: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor.',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00383')).toBe(true)
+  })
+
+  it('SEO00386: should trigger for TODO in description (uses same rule as title)', () => {
+    // Note: The code uses ruleId.replace('382', '383') which only affects SEO00382-based patterns
+    // TODO pattern uses SEO00386 which doesn't contain 382, so remains SEO00386
+    const page = createPageData({
+      metaDescription: 'TODO: Write a proper description for this page that is long enough',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00386')).toBe(true)
+  })
+
+  it('SEO00384: should trigger for lorem ipsum in H1', () => {
+    // Note: 382 + 2 = 384 for H1
+    const page = createPageData({
+      h1s: ['Lorem ipsum dolor sit amet'],
+      headingOrder: [{ level: 1, text: 'Lorem ipsum dolor sit amet' }],
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00384')).toBe(true)
+  })
+
+  it('SEO00385: should trigger for lorem ipsum in body text', () => {
+    const page = createPageData({
+      html: '<!DOCTYPE html><html><body>Lorem ipsum dolor sit amet</body></html>',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00385')).toBe(true)
+  })
+
+  it('SEO00389: should trigger for TODO in body text', () => {
+    const page = createPageData({
+      html: '<!DOCTYPE html><html><body>TODO fix this content</body></html>',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00389')).toBe(true)
+  })
+
+  it('SEO00393: should trigger for FIXME in body text', () => {
+    const page = createPageData({
+      html: '<!DOCTYPE html><html><body>FIXME this needs updating</body></html>',
+    })
+    const issues = checkTemplateHygiene(page, config)
+    expect(hasIssue(issues, 'SEO00393')).toBe(true)
+  })
+})
+
+describe('Metadata checks - multiple viewport', () => {
+  const config = createConfig()
+
+  it('SEO00414: should trigger for multiple viewport tags', () => {
+    const page = createPageData({
+      html: '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width"><meta name="viewport" content="initial-scale=1"></head></html>',
+    })
+    const issues = checkMetadata(page, config)
+    expect(hasIssue(issues, 'SEO00414')).toBe(true)
+  })
+})
+
+describe('Article-specific checks', () => {
+  const config = createConfig()
+
+  it('SEO01203: should trigger for article missing og:article:published_time', () => {
+    const page = createPageData({
+      og: {
+        title: 'Article Title',
+        description: 'A long enough description for validation here',
+        image: 'https://example.com/img.jpg',
+        url: 'https://example.com/',
+        type: 'article',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01203')).toBe(true)
+  })
+
+  it('SEO01204: should trigger for article missing og:article:author', () => {
+    const page = createPageData({
+      og: {
+        title: 'Article Title',
+        description: 'A long enough description for validation here',
+        image: 'https://example.com/img.jpg',
+        url: 'https://example.com/',
+        type: 'article',
+        articlePublishedTime: '2024-01-01',
+      },
+    })
+    const issues = checkSocialTags(page, config)
+    expect(hasIssue(issues, 'SEO01204')).toBe(true)
+  })
+
+  it('SEO01216: should trigger for article page missing author info', () => {
+    const page = createPageData({
+      isArticle: true,
+      hasAuthorInfo: false,
+    })
+    const issues = checkEEAT(page, config)
+    expect(hasIssue(issues, 'SEO01216')).toBe(true)
+  })
+})
+
+describe('Video checks', () => {
+  const config = createConfig()
+
+  it('SEO01215: should trigger for video missing poster attribute', () => {
+    const page = createPageData({
+      videos: [{ src: '/video.mp4' }],
+    })
+    const issues = checkVideos(page, config)
+    expect(hasIssue(issues, 'SEO01215')).toBe(true)
+  })
+})
+
+describe('Favicon check', () => {
+  const config = createConfig()
+
+  it('SEO01217: should trigger for missing favicon', () => {
+    const page = createPageData({
+      hasFavicon: false,
+    })
+    const issues = checkFavicon(page, config)
+    expect(hasIssue(issues, 'SEO01217')).toBe(true)
+  })
+})
+
+describe('Image dimension checks', () => {
+  const config = createConfig()
+
+  it('SEO01218: should trigger for image missing width only', () => {
+    const page = createPageData({
+      images: [{ src: '/img.jpg', alt: 'Test image', height: '100' }],
+    })
+    const issues = checkImageDimensions(page, config)
+    expect(hasIssue(issues, 'SEO01218')).toBe(true)
+  })
+
+  it('SEO01219: should trigger for image missing height only', () => {
+    const page = createPageData({
+      images: [{ src: '/img.jpg', alt: 'Test image', width: '100' }],
+    })
+    const issues = checkImageDimensions(page, config)
+    expect(hasIssue(issues, 'SEO01219')).toBe(true)
+  })
+
+  it('SEO01220: should trigger for image missing both width and height', () => {
+    const page = createPageData({
+      images: [{ src: '/img.jpg', alt: 'Test image' }],
+    })
+    const issues = checkImageDimensions(page, config)
+    expect(hasIssue(issues, 'SEO01220')).toBe(true)
   })
 })
