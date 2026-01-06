@@ -842,7 +842,10 @@ export function checkLinks(page: PageData, config: SEOCheckerConfig): SEOIssue[]
     }
 
     // SEO00135: Anchor text missing/empty (no text, no aria-label, no title)
-    if (!link.text || link.text.trim() === '') {
+    const hasText = link.text && link.text.trim() !== ''
+    const hasAriaLabel = link.ariaLabel && link.ariaLabel.trim() !== ''
+    const hasTitle = link.title && link.title.trim() !== ''
+    if (!hasText && !hasAriaLabel && !hasTitle) {
       const issue = createIssue('SEO00135', page, { element: link.href })
       if (issue)
         issues.push(issue)

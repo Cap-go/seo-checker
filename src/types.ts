@@ -141,6 +141,8 @@ export interface PageData {
   links: {
     href: string
     text: string
+    ariaLabel?: string
+    title?: string
     rel?: string
     target?: string
     isInternal: boolean

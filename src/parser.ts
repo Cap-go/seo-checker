@@ -124,6 +124,8 @@ export function parseHtmlFile(
     links.push({
       href,
       text: $el.text().trim(),
+      ariaLabel: $el.attr('aria-label'),
+      title: $el.attr('title'),
       rel: $el.attr('rel'),
       target: $el.attr('target'),
       isInternal,
