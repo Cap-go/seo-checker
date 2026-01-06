@@ -27,6 +27,7 @@ import {
   checkLinks,
   checkMetadata,
   checkOrphanPages,
+  checkRedirects,
   checkRobotsTxt,
   checkSitemap,
   checkSocialTags,
@@ -34,6 +35,7 @@ import {
   checkTemplateHygiene,
   checkUrlHygiene,
   checkVideos,
+  parseRedirectsFile,
 } from './checks.js'
 
 // Helper to create minimal site data
@@ -3355,6 +3357,282 @@ describe('checkSitemap', () => {
         const siteData = createSiteData()
         const issues = checkSitemap(config, siteData)
         expect(hasIssue(issues, 'SEO01171')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+})
+
+// ========================================
+// Tests for _redirects validation (SEO01221-01225)
+// ========================================
+
+describe('checkRedirects', () => {
+  function createTempDir(): string {
+    return fs.mkdtempSync(path.join(os.tmpdir(), 'seo-redirects-test-'))
+  }
+
+  function cleanupTempDir(dir: string): void {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+
+  describe('parseRedirectsFile', () => {
+    it('should return empty array when no _redirects file exists', () => {
+      const tempDir = createTempDir()
+      try {
+        const config = createConfig({ distPath: tempDir })
+        const rules = parseRedirectsFile(config)
+        expect(rules).toEqual([])
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should parse basic redirect rules', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/old /new
+/another /destination 301
+# This is a comment
+/external https://example.com 302`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const rules = parseRedirectsFile(config)
+        expect(rules.length).toBe(3)
+        expect(rules[0]).toEqual({
+          from: '/old',
+          to: '/new',
+          status: 301,
+          line: 1,
+          isExternal: false,
+          isSplat: false,
+        })
+        expect(rules[1]).toEqual({
+          from: '/another',
+          to: '/destination',
+          status: 301,
+          line: 2,
+          isExternal: false,
+          isSplat: false,
+        })
+        expect(rules[2]).toEqual({
+          from: '/external',
+          to: 'https://example.com',
+          status: 302,
+          line: 4,
+          isExternal: true,
+          isSplat: false,
+        })
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should detect splat/wildcard redirects', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/old/* /new/:splat 301
+/blog/:slug /articles/:slug`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const rules = parseRedirectsFile(config)
+        expect(rules.length).toBe(2)
+        expect(rules[0].isSplat).toBe(true)
+        expect(rules[1].isSplat).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01221: Redirect destination page does not exist', () => {
+    it('should trigger when local redirect destination does not exist', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/old /nonexistent 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01221')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when local redirect destination exists', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'new'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'new', 'index.html'), '<html></html>')
+        const redirectsContent = `/old /new 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01221')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger for external redirect destinations', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/old https://example.com/page 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01221')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01222: Invalid redirect rule format', () => {
+    it('should trigger when redirect rule has only one part', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/only-source`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01222')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01223: Redirect source page exists (unnecessary redirect)', () => {
+    it('should trigger when source page file exists', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'old'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'old', 'index.html'), '<html></html>')
+        fs.mkdirSync(path.join(tempDir, 'new'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'new', 'index.html'), '<html></html>')
+        const redirectsContent = `/old /new 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01223')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when source page does not exist', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'new'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'new', 'index.html'), '<html></html>')
+        const redirectsContent = `/old /new 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01223')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01224: Redirect chain detected', () => {
+    it('should trigger when redirect destination is also a redirect source', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'final'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'final', 'index.html'), '<html></html>')
+        const redirectsContent = `/old /middle 301
+/middle /final 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01224')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger when redirect destination is not a redirect source', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'new'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'new', 'index.html'), '<html></html>')
+        const redirectsContent = `/old /new 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01224')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('SEO01225: Sitemap URL is a redirect source', () => {
+    it('should trigger when sitemap contains URL that is a redirect source', () => {
+      const tempDir = createTempDir()
+      try {
+        // Create _redirects file
+        const redirectsContent = `/newsletter-coworking-contest-email /newsletter 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+
+        // Create sitemap with the redirect source URL
+        const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/newsletter-coworking-contest-email/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+
+        // Create the redirect destination page
+        fs.mkdirSync(path.join(tempDir, 'newsletter'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'newsletter', 'index.html'), '<html></html>')
+
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01225')).toBe(true)
+        // Should NOT trigger SEO01160 since the URL is a redirect
+        expect(hasIssue(issues, 'SEO01160')).toBe(false)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger SEO01225 when sitemap URL is not a redirect source', () => {
+      const tempDir = createTempDir()
+      try {
+        // Create sitemap with a regular URL
+        const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/about/</loc></url>
+</urlset>`
+        fs.writeFileSync(path.join(tempDir, 'sitemap.xml'), sitemapContent)
+
+        // Create the page
+        fs.mkdirSync(path.join(tempDir, 'about'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'about', 'index.html'), '<html></html>')
+
+        const config = createConfig({ distPath: tempDir, baseUrl: 'https://example.com' })
+        const siteData = createSiteData()
+        const issues = checkSitemap(config, siteData)
+        expect(hasIssue(issues, 'SEO01225')).toBe(false)
+        expect(hasIssue(issues, 'SEO01160')).toBe(false)
       }
       finally {
         cleanupTempDir(tempDir)

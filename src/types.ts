@@ -231,3 +231,18 @@ export interface CheckResult {
   excludedCount: number
   duration: number
 }
+
+export interface RedirectRule {
+  /** Source path (from) */
+  from: string
+  /** Destination path or URL (to) */
+  to: string
+  /** HTTP status code (301, 302, etc.) */
+  status: number
+  /** Line number in _redirects file */
+  line: number
+  /** Whether destination is external */
+  isExternal: boolean
+  /** Whether this is a splat/wildcard redirect */
+  isSplat: boolean
+}

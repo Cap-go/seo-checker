@@ -19,12 +19,14 @@ export {
   checkLinks,
   checkMetadata,
   checkOrphanPages,
+  checkRedirects,
   checkRobotsTxt,
   checkSitemap,
   checkSocialTags,
   checkStructuredData,
   checkTemplateHygiene,
   checkUrlHygiene,
+  parseRedirectsFile,
   runPageChecks,
 } from './checks.js'
 
@@ -82,6 +84,7 @@ export type {
   CheckResult,
   ExclusionRule,
   PageData,
+  RedirectRule,
   RuleScope,
   SEOCheckerConfig,
   SEOIssue,

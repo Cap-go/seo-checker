@@ -14519,5 +14519,65 @@
       "cls",
       "images"
     ]
+  },
+  {
+    "id": "SEO01221",
+    "category": "Redirects",
+    "name": "Redirect destination page does not exist",
+    "scope": "site",
+    "severity": "error",
+    "fixHint": "Ensure the redirect destination page exists or update the redirect rule.",
+    "tags": [
+      "redirects",
+      "broken"
+    ]
+  },
+  {
+    "id": "SEO01222",
+    "category": "Redirects",
+    "name": "Invalid redirect rule format",
+    "scope": "site",
+    "severity": "error",
+    "fixHint": "Fix the redirect rule format. Expected: '/from /to [status]' (e.g., '/old /new 301').",
+    "tags": [
+      "redirects",
+      "syntax"
+    ]
+  },
+  {
+    "id": "SEO01223",
+    "category": "Redirects",
+    "name": "Redirect source page exists (unnecessary redirect)",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "The source page exists as a file. Consider removing the redirect or the file.",
+    "tags": [
+      "redirects",
+      "unnecessary"
+    ]
+  },
+  {
+    "id": "SEO01224",
+    "category": "Redirects",
+    "name": "Redirect chain detected",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Avoid redirect chains. Update the redirect to point directly to the final destination.",
+    "tags": [
+      "redirects",
+      "chain"
+    ]
+  },
+  {
+    "id": "SEO01225",
+    "category": "Sitemap",
+    "name": "Sitemap URL is a redirect source",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update the sitemap to use the redirect destination URL instead of the source URL.",
+    "tags": [
+      "sitemap",
+      "redirects"
+    ]
   }
 ]

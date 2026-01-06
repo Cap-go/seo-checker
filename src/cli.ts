@@ -20,7 +20,7 @@
 import type { CheckResult, SEOCheckerConfig, SEOIssue, Severity } from './types.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { checkDuplicates, checkOrphanPages, checkRobotsTxt, checkSitemap, runPageChecks } from './checks.js'
+import { checkDuplicates, checkOrphanPages, checkRedirects, checkRobotsTxt, checkSitemap, runPageChecks } from './checks.js'
 import { filterDisabledRules, filterExcludedIssues, loadExclusionsFromFile } from './exclusions.js'
 import { scanDistFolder } from './parser.js'
 import { formatGitHubReport, formatJsonReport, printReport, writeReport } from './reporter.js'
@@ -277,14 +277,15 @@ async function run(): Promise<void> {
 
   // Run site-wide checks in parallel
   const siteCheckStart = Date.now()
-  const [duplicateIssues, orphanIssues, robotsIssues, sitemapIssues] = await Promise.all([
+  const [duplicateIssues, orphanIssues, robotsIssues, sitemapIssues, redirectIssues] = await Promise.all([
     Promise.resolve(checkDuplicates(siteData, config)),
     Promise.resolve(checkOrphanPages(siteData, config)),
     Promise.resolve(checkRobotsTxt(config)),
     Promise.resolve(checkSitemap(config, siteData)),
+    Promise.resolve(checkRedirects(config)),
   ])
 
-  allIssues.push(...duplicateIssues, ...orphanIssues, ...robotsIssues, ...sitemapIssues)
+  allIssues.push(...duplicateIssues, ...orphanIssues, ...robotsIssues, ...sitemapIssues, ...redirectIssues)
   console.log(`Site-wide checks completed (${Date.now() - siteCheckStart}ms)`)
 
   // Filter disabled rules

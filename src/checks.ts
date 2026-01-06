@@ -4,7 +4,7 @@
  * Implements rules from the comprehensive SEO rules CSV
  */
 
-import type { PageData, SEOCheckerConfig, SEOIssue, SiteData } from './types.js'
+import type { PageData, RedirectRule, SEOCheckerConfig, SEOIssue, SiteData } from './types.js'
 import * as fsSync from 'node:fs'
 import * as path from 'node:path'
 import { validateUrlDomain } from './domain.js'
@@ -2553,6 +2553,18 @@ export function checkRobotsTxt(config: SEOCheckerConfig): SEOIssue[] {
 export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEOIssue[] {
   const issues: SEOIssue[] = []
 
+  // Load redirect rules to check if sitemap URLs are redirect sources
+  const redirectRules = parseRedirectsFile(config)
+  const redirectSources = new Set<string>()
+  for (const rule of redirectRules) {
+    // Normalize the path (with and without leading slash, with and without trailing slash)
+    const normalized = rule.from.replace(/^\//, '').replace(/\/$/, '')
+    redirectSources.add(normalized)
+    redirectSources.add(`/${normalized}`)
+    redirectSources.add(`/${normalized}/`)
+    redirectSources.add(rule.from)
+  }
+
   // Check for sitemap files - could be sitemap.xml, sitemap-index.xml, or sitemap-0.xml
   const possibleSitemaps = ['sitemap.xml', 'sitemap-index.xml', 'sitemap-0.xml']
   let foundSitemap = false
@@ -2762,6 +2774,39 @@ export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEO
         urlPath = url.replace(config.baseUrl, '').replace(/^\//, '').replace(/\/$/, '')
       }
 
+      // Check if this URL path is a redirect source
+      const isRedirectSource = redirectSources.has(urlPath)
+        || redirectSources.has(`/${urlPath}`)
+        || redirectSources.has(`/${urlPath}/`)
+
+      // SEO01225: Sitemap URL is a redirect source
+      if (isRedirectSource) {
+        const rule = getRule('SEO01225')
+        if (rule) {
+          // Find the redirect destination for helpful message
+          const redirectRule = redirectRules.find(r =>
+            r.from === `/${urlPath}`
+            || r.from === `/${urlPath}/`
+            || r.from === urlPath,
+          )
+          issues.push({
+            ruleId: 'SEO01225',
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: sitemapPath,
+            relativePath,
+            element: url.substring(0, 80),
+            actual: url,
+            expected: redirectRule ? redirectRule.to : 'redirect destination',
+            fixHint: rule.fixHint,
+            fingerprint: `SEO01225::${url.substring(0, 50)}`,
+          })
+        }
+        // Skip non-existent page check since it's a redirect
+        continue
+      }
+
       const possiblePaths = [
         path.join(config.distPath, urlPath, 'index.html'),
         path.join(config.distPath, `${urlPath}.html`),
@@ -2806,6 +2851,223 @@ export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEO
           fixHint: rule.fixHint,
           fingerprint: 'SEO01164::sitemap',
         })
+      }
+    }
+  }
+
+  return issues
+}
+
+/**
+ * Parse a _redirects file (Netlify/Cloudflare Pages format)
+ * Returns an array of redirect rules
+ */
+export function parseRedirectsFile(config: SEOCheckerConfig): RedirectRule[] {
+  const redirectsPath = path.join(config.distPath, '_redirects')
+
+  if (!fileExists(redirectsPath)) {
+    return []
+  }
+
+  const content = fsSync.readFileSync(redirectsPath, 'utf-8')
+  const rules: RedirectRule[] = []
+
+  const lines = content.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+
+    // Skip empty lines and comments
+    if (!line || line.startsWith('#')) {
+      continue
+    }
+
+    // Parse redirect rule: /from /to [status] [!]
+    // Examples:
+    //   /old /new
+    //   /old /new 301
+    //   /old https://example.com 302
+    //   /old/* /new/:splat 301
+    const parts = line.split(/\s+/)
+
+    if (parts.length < 2) {
+      continue // Invalid line, will be caught by checkRedirects
+    }
+
+    const from = parts[0]
+    const to = parts[1]
+    let status = 301 // Default status
+
+    // Check for status code
+    if (parts.length >= 3) {
+      const statusStr = parts[2].replace('!', '')
+      const parsed = Number.parseInt(statusStr, 10)
+      if (!Number.isNaN(parsed)) {
+        status = parsed
+      }
+    }
+
+    const isExternal = to.startsWith('http://') || to.startsWith('https://')
+    const isSplat = from.includes('*') || from.includes(':')
+
+    rules.push({
+      from,
+      to,
+      status,
+      line: i + 1,
+      isExternal,
+      isSplat,
+    })
+  }
+
+  return rules
+}
+
+/**
+ * Check _redirects file for issues
+ * SEO01221-01224
+ */
+export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
+  const issues: SEOIssue[] = []
+  const redirectsPath = path.join(config.distPath, '_redirects')
+
+  if (!fileExists(redirectsPath)) {
+    return issues // No _redirects file, nothing to check
+  }
+
+  const content = fsSync.readFileSync(redirectsPath, 'utf-8')
+  const lines = content.split('\n')
+  const rules = parseRedirectsFile(config)
+
+  // Build a map of redirect destinations for chain detection
+  const redirectSources = new Map<string, RedirectRule>()
+  for (const rule of rules) {
+    redirectSources.set(rule.from, rule)
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+
+    // Skip empty lines and comments
+    if (!line || line.startsWith('#')) {
+      continue
+    }
+
+    const parts = line.split(/\s+/)
+
+    // SEO01222: Invalid redirect rule format
+    if (parts.length < 2) {
+      const rule = getRule('SEO01222')
+      if (rule) {
+        issues.push({
+          ruleId: 'SEO01222',
+          ruleName: rule.name,
+          category: rule.category,
+          severity: rule.severity,
+          file: redirectsPath,
+          relativePath: '_redirects',
+          line: i + 1,
+          element: line.substring(0, 80),
+          fixHint: rule.fixHint,
+          fingerprint: `SEO01222::${i + 1}::${line.substring(0, 30)}`,
+        })
+      }
+      continue
+    }
+
+    const from = parts[0]
+    const to = parts[1]
+
+    // Skip splat/wildcard redirects for file existence checks
+    const isSplat = from.includes('*') || from.includes(':')
+    const isExternal = to.startsWith('http://') || to.startsWith('https://')
+
+    // SEO01221: Redirect destination page does not exist (for local destinations)
+    if (!isExternal && !to.includes('*') && !to.includes(':')) {
+      const toPath = to.replace(/^\//, '').replace(/\/$/, '')
+      const possiblePaths = [
+        path.join(config.distPath, toPath, 'index.html'),
+        path.join(config.distPath, `${toPath}.html`),
+        path.join(config.distPath, toPath),
+      ]
+
+      const destinationExists = possiblePaths.some(p => fileExists(p))
+
+      // Also check if destination is itself a redirect source (which is fine)
+      const isRedirectSource = redirectSources.has(to) || redirectSources.has(`/${toPath}`)
+
+      if (!destinationExists && !isRedirectSource && toPath !== '') {
+        const rule = getRule('SEO01221')
+        if (rule) {
+          issues.push({
+            ruleId: 'SEO01221',
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: redirectsPath,
+            relativePath: '_redirects',
+            line: i + 1,
+            element: `${from} -> ${to}`,
+            actual: to,
+            fixHint: rule.fixHint,
+            fingerprint: `SEO01221::${from}::${to}`,
+          })
+        }
+      }
+    }
+
+    // SEO01223: Redirect source page exists (unnecessary redirect)
+    if (!isSplat) {
+      const fromPath = from.replace(/^\//, '').replace(/\/$/, '')
+      const possiblePaths = [
+        path.join(config.distPath, fromPath, 'index.html'),
+        path.join(config.distPath, `${fromPath}.html`),
+      ]
+
+      const sourceExists = possiblePaths.some(p => fileExists(p))
+
+      if (sourceExists) {
+        const rule = getRule('SEO01223')
+        if (rule) {
+          issues.push({
+            ruleId: 'SEO01223',
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: redirectsPath,
+            relativePath: '_redirects',
+            line: i + 1,
+            element: `${from} -> ${to}`,
+            actual: from,
+            fixHint: rule.fixHint,
+            fingerprint: `SEO01223::${from}`,
+          })
+        }
+      }
+    }
+
+    // SEO01224: Redirect chain detected
+    if (!isExternal && !to.includes('*') && !to.includes(':')) {
+      // Check if destination is also a redirect source
+      const normalizedTo = to.startsWith('/') ? to : `/${to}`
+      const chainedRule = redirectSources.get(normalizedTo)
+
+      if (chainedRule) {
+        const rule = getRule('SEO01224')
+        if (rule) {
+          issues.push({
+            ruleId: 'SEO01224',
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: redirectsPath,
+            relativePath: '_redirects',
+            line: i + 1,
+            element: `${from} -> ${to} -> ${chainedRule.to}`,
+            actual: `Chain: ${from} -> ${to} -> ${chainedRule.to}`,
+            fixHint: rule.fixHint,
+            fingerprint: `SEO01224::${from}::${to}`,
+          })
+        }
       }
     }
   }
