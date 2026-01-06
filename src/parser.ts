@@ -8,9 +8,11 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { load } from 'cheerio'
+import { getExpectedHostname, getMainDomain } from './domain.js'
 
 // Pre-compiled URL for faster hostname comparison
 let baseHostname: string | null = null
+let mainDomain: string | null = null
 
 /**
  * Parse a single HTML file and extract SEO data
@@ -29,14 +31,10 @@ export function parseHtmlFile(
   const urlPath = relativePath.replace(/index\.html$/, '').replace(/\.html$/, '')
   const url = `${config.baseUrl}/${urlPath}`.replace(/\/+$/, '') || config.baseUrl
 
-  // Cache base hostname for URL checks
+  // Cache base hostname and main domain for URL checks
   if (baseHostname === null) {
-    try {
-      baseHostname = new URL(config.baseUrl).hostname
-    }
-    catch {
-      baseHostname = ''
-    }
+    baseHostname = getExpectedHostname(config)
+    mainDomain = getMainDomain(config)
   }
 
   // Extract headings with their order - single pass
@@ -94,9 +92,28 @@ export function parseHtmlFile(
       }
       else if (href.startsWith('http://') || href.startsWith('https://')) {
         try {
-          const urlHost = new URL(href).hostname
-          isExternal = urlHost !== baseHostname
-          isInternal = urlHost === baseHostname
+          const urlHost = new URL(href).hostname.toLowerCase()
+          // Check if the hostname matches the expected hostname exactly
+          // or if the normalized hostname (without www) matches the main domain
+          const normalizedUrlHost = urlHost.replace(/^www\./, '')
+
+          if (urlHost === baseHostname) {
+            // Exact match with baseUrl hostname
+            isInternal = true
+          }
+          else if (mainDomain && normalizedUrlHost === mainDomain) {
+            // Same domain but different www prefix - still considered internal
+            // but may trigger domain mismatch warnings elsewhere
+            isInternal = true
+          }
+          else if (mainDomain && normalizedUrlHost.endsWith(`.${mainDomain}`)) {
+            // Subdomain of main domain - considered external for link purposes
+            // (e.g., blog.example.com when main domain is example.com)
+            isExternal = true
+          }
+          else {
+            isExternal = true
+          }
         }
         catch {
           // Invalid URL
@@ -423,6 +440,14 @@ export function fileExists(filePath: string): boolean {
  */
 export function clearFileExistsCache(): void {
   fileExistsCache.clear()
+}
+
+/**
+ * Clear domain hostname cache (useful between runs or when config changes)
+ */
+export function clearDomainCache(): void {
+  baseHostname = null
+  mainDomain = null
 }
 
 /**

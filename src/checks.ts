@@ -7,6 +7,7 @@
 import type { PageData, SEOCheckerConfig, SEOIssue, SiteData } from './types.js'
 import * as fsSync from 'node:fs'
 import * as path from 'node:path'
+import { validateUrlDomain } from './domain.js'
 import { fileExists, resolveToFilePath } from './parser.js'
 import { getRule } from './rules.js'
 
@@ -766,6 +767,33 @@ export function checkIndexability(page: PageData, config: SEOCheckerConfig): SEO
       if (issue)
         issues.push(issue)
     }
+
+    // Domain validation for canonical URL
+    const domainValidation = validateUrlDomain(page.canonical, config)
+    if (!domainValidation.isValid && domainValidation.issue) {
+      // SEO00104: www when main domain does not use it
+      // SEO00420: missing www when main domain uses it
+      // SEO00421: different subdomain
+      let ruleId: string
+      switch (domainValidation.issue) {
+        case 'www_mismatch':
+          ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO00104' : 'SEO00420'
+          break
+        case 'subdomain':
+          ruleId = 'SEO00421'
+          break
+        default:
+          ruleId = 'SEO00421' // wrong_domain treated as subdomain issue
+      }
+
+      const issue = createIssue(ruleId, page, {
+        element: page.canonical,
+        actual: domainValidation.hostname || page.canonical,
+        expected: domainValidation.expectedHostname,
+      })
+      if (issue)
+        issues.push(issue)
+    }
   }
 
   // SEO00105: Conflicting robots directives
@@ -835,13 +863,6 @@ export function checkLinks(page: PageData, config: SEOCheckerConfig): SEOIssue[]
     // SEO00143: Internal link uses nofollow
     if (link.isInternal && link.rel?.includes('nofollow')) {
       const issue = createIssue('SEO00143', page, { element: link.href })
-      if (issue)
-        issues.push(issue)
-    }
-
-    // SEO00144: External link with target=_blank missing noopener
-    if (link.isExternal && link.target === '_blank' && !link.rel?.includes('noopener')) {
-      const issue = createIssue('SEO00144', page, { element: link.href })
       if (issue)
         issues.push(issue)
     }
@@ -1122,6 +1143,32 @@ export function checkSocialTags(page: PageData, config: SEOCheckerConfig): SEOIs
     if (issue)
       issues.push(issue)
   }
+  else {
+    // Domain validation for og:url
+    const domainValidation = validateUrlDomain(page.og.url, config)
+    if (!domainValidation.isValid && domainValidation.issue) {
+      // SEO00422: www when main domain does not use it
+      // SEO00423: missing www when main domain uses it
+      let ruleId: string
+      switch (domainValidation.issue) {
+        case 'www_mismatch':
+          ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO00422' : 'SEO00423'
+          break
+        default:
+          ruleId = '' // Skip for subdomain/wrong_domain - og:url may legitimately differ
+      }
+
+      if (ruleId) {
+        const issue = createIssue(ruleId, page, {
+          element: page.og.url,
+          actual: domainValidation.hostname || page.og.url,
+          expected: domainValidation.expectedHostname,
+        })
+        if (issue)
+          issues.push(issue)
+      }
+    }
+  }
 
   // Twitter card
   if (!page.twitter.card) {
@@ -1182,7 +1229,7 @@ export function checkSocialTags(page: PageData, config: SEOCheckerConfig): SEOIs
  * Check international SEO rules
  * SEO00177-00185
  */
-export function checkInternationalSEO(page: PageData, _config: SEOCheckerConfig): SEOIssue[] {
+export function checkInternationalSEO(page: PageData, config: SEOCheckerConfig): SEOIssue[] {
   const issues: SEOIssue[] = []
 
   // SEO00182: Invalid HTML lang attribute
@@ -1220,6 +1267,33 @@ export function checkInternationalSEO(page: PageData, _config: SEOCheckerConfig)
         const issue = createIssue('SEO00180', page, { element: `${hreflang.lang}: ${hreflang.url}` })
         if (issue)
           issues.push(issue)
+      }
+      else {
+        // Domain validation for hreflang URLs (only for absolute URLs)
+        const domainValidation = validateUrlDomain(hreflang.url, config)
+        if (!domainValidation.isValid && domainValidation.issue) {
+          // SEO00184: www when main domain does not use it
+          // SEO00185: missing www when main domain uses it
+          let ruleId: string
+          switch (domainValidation.issue) {
+            case 'www_mismatch':
+              ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO00184' : 'SEO00185'
+              break
+            default:
+              // For subdomain/wrong_domain, skip - hreflang can reference different subdomains legitimately
+              ruleId = ''
+          }
+
+          if (ruleId) {
+            const issue = createIssue(ruleId, page, {
+              element: `${hreflang.lang}: ${hreflang.url}`,
+              actual: domainValidation.hostname || hreflang.url,
+              expected: domainValidation.expectedHostname,
+            })
+            if (issue)
+              issues.push(issue)
+          }
+        }
       }
 
       // Check for self-reference
@@ -1774,8 +1848,45 @@ export function checkRobotsTxt(config: SEOCheckerConfig): SEOIssue[] {
       hasSitemap = true
       sitemapUrls.push(value)
 
-      // SEO01157: Sitemap URL doesn't match baseUrl
-      if (!value.startsWith(config.baseUrl)) {
+      // Validate domain of sitemap URL
+      const domainValidation = validateUrlDomain(value, config)
+
+      if (!domainValidation.isValid && domainValidation.issue) {
+        // SEO01166: www when main domain does not use it
+        // SEO01167: missing www when main domain uses it
+        // SEO01168: different subdomain
+        let ruleId: string
+        switch (domainValidation.issue) {
+          case 'www_mismatch':
+            // Check if the URL has www but expected doesn't
+            ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO01166' : 'SEO01167'
+            break
+          case 'subdomain':
+            ruleId = 'SEO01168'
+            break
+          default:
+            ruleId = 'SEO01157'
+        }
+
+        const rule = getRule(ruleId)
+        if (rule) {
+          issues.push({
+            ruleId,
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: 'robots.txt',
+            relativePath: 'robots.txt',
+            element: value,
+            actual: domainValidation.hostname || value,
+            expected: domainValidation.expectedHostname,
+            fixHint: rule.fixHint,
+            fingerprint: `${ruleId}::${value}`,
+          })
+        }
+      }
+      else if (!value.startsWith(config.baseUrl)) {
+        // SEO01157: Sitemap URL doesn't match baseUrl (fallback for protocol mismatch, etc.)
         const rule = getRule('SEO01157')
         if (rule) {
           issues.push({
@@ -1968,6 +2079,42 @@ export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEO
             element: url.substring(0, 80),
             fixHint: rule.fixHint,
             fingerprint: `SEO01161::${url.substring(0, 50)}`,
+          })
+        }
+      }
+
+      // Domain validation for sitemap URLs
+      const domainValidation = validateUrlDomain(url, config)
+      if (!domainValidation.isValid && domainValidation.issue) {
+        // SEO01169: www when main domain does not use it
+        // SEO01170: missing www when main domain uses it
+        // SEO01171: different subdomain
+        let ruleId: string
+        switch (domainValidation.issue) {
+          case 'www_mismatch':
+            ruleId = domainValidation.hostname?.startsWith('www.') ? 'SEO01169' : 'SEO01170'
+            break
+          case 'subdomain':
+            ruleId = 'SEO01171'
+            break
+          default:
+            ruleId = 'SEO01171' // wrong_domain treated as subdomain issue
+        }
+
+        const rule = getRule(ruleId)
+        if (rule) {
+          issues.push({
+            ruleId,
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: sitemapPath,
+            relativePath,
+            element: url.substring(0, 80),
+            actual: domainValidation.hostname || url,
+            expected: domainValidation.expectedHostname,
+            fixHint: rule.fixHint,
+            fingerprint: `${ruleId}::${url.substring(0, 50)}`,
           })
         }
       }

@@ -129,6 +129,7 @@ function generateSampleConfig(): void {
   const sampleConfig = {
     distPath: './dist',
     baseUrl: 'https://example.com',
+    mainDomain: 'example.com',
     languages: ['en', 'es', 'fr', 'de'],
     defaultLanguage: 'en',
     rules: {

@@ -27,6 +27,17 @@ export {
   runPageChecks,
 } from './checks.js'
 
+// Domain utilities
+export {
+  extractHostname,
+  getExpectedHostname,
+  getMainDomain,
+  isExactHostnameMatch,
+  isSameSite,
+  normalizeDomain,
+  validateUrlDomain,
+} from './domain.js'
+
 // Exclusions
 export {
   exportExclusionsToFile,
@@ -39,6 +50,7 @@ export {
 
 // Parser
 export {
+  clearDomainCache,
   clearFileExistsCache,
   fileExists,
   parseHtmlFile,

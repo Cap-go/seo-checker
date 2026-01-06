@@ -56,8 +56,14 @@ export interface ExclusionRule {
 export interface SEOCheckerConfig {
   /** Path to the dist folder */
   distPath: string
-  /** Base URL for the site */
+  /** Base URL for the site (e.g., https://example.com) */
   baseUrl: string
+  /**
+   * Main domain name for the site (e.g., example.com)
+   * Used to validate that URLs use the correct domain (not www, subdomains, etc.)
+   * If not provided, it will be extracted from baseUrl
+   */
+  mainDomain?: string
   /** List of supported languages */
   languages: string[]
   /** Default language */

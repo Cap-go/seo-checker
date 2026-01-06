@@ -1651,17 +1651,6 @@
     ]
   },
   {
-    "id": "SEO00144",
-    "category": "Links",
-    "name": "External link with target=_blank missing rel=noopener",
-    "scope": "page",
-    "severity": "warning",
-    "fixHint": "Add rel=\"noopener\" (and usually noreferrer) to target=_blank external links.",
-    "tags": [
-      "securitylinks"
-    ]
-  },
-  {
     "id": "SEO00145",
     "category": "Links",
     "name": "mailto: link missing email address",
@@ -4923,27 +4912,27 @@
   },
   {
     "id": "SEO00422",
-    "category": "Links",
-    "name": "Link rel contains unknown capitalization for 'noopener' (normalize)",
+    "category": "Social Tags",
+    "name": "og:url uses www when main domain does not",
     "scope": "page",
-    "severity": "notice",
-    "fixHint": "Normalize rel tokens to lowercase space-separated.",
+    "severity": "warning",
+    "fixHint": "Update og:url to match the main domain (without www).",
     "tags": [
-      "links"
-    ],
-    "threshold": "noopener"
+      "opengraph",
+      "domain"
+    ]
   },
   {
     "id": "SEO00423",
-    "category": "Links",
-    "name": "Link rel contains unknown capitalization for 'noreferrer' (normalize)",
+    "category": "Social Tags",
+    "name": "og:url missing www when main domain uses it",
     "scope": "page",
-    "severity": "notice",
-    "fixHint": "Normalize rel tokens to lowercase space-separated.",
+    "severity": "warning",
+    "fixHint": "Update og:url to match the main domain (with www).",
     "tags": [
-      "links"
-    ],
-    "threshold": "noreferrer"
+      "opengraph",
+      "domain"
+    ]
   },
   {
     "id": "SEO00424",
@@ -13788,6 +13777,141 @@
     "tags": [
       "robots",
       "sitemap"
+    ]
+  },
+  {
+    "id": "SEO01166",
+    "category": "Robots",
+    "name": "robots.txt Sitemap URL uses www when main domain does not",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update Sitemap URL to match the main domain (without www).",
+    "tags": [
+      "robots",
+      "sitemap",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO01167",
+    "category": "Robots",
+    "name": "robots.txt Sitemap URL missing www when main domain uses it",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update Sitemap URL to match the main domain (with www).",
+    "tags": [
+      "robots",
+      "sitemap",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO01168",
+    "category": "Robots",
+    "name": "robots.txt Sitemap URL uses different subdomain",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update Sitemap URL to use the correct domain.",
+    "tags": [
+      "robots",
+      "sitemap",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO01169",
+    "category": "Sitemaps",
+    "name": "Sitemap URL uses www when main domain does not",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update URL to match the main domain (without www).",
+    "tags": [
+      "sitemap",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO01170",
+    "category": "Sitemaps",
+    "name": "Sitemap URL missing www when main domain uses it",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update URL to match the main domain (with www).",
+    "tags": [
+      "sitemap",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO01171",
+    "category": "Sitemaps",
+    "name": "Sitemap URL uses different subdomain",
+    "scope": "site",
+    "severity": "warning",
+    "fixHint": "Update URL to use the correct domain.",
+    "tags": [
+      "sitemap",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO00104",
+    "category": "Indexability",
+    "name": "Canonical URL uses www when main domain does not",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Update canonical URL to match the main domain (without www).",
+    "tags": [
+      "canonical",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO00420",
+    "category": "Indexability",
+    "name": "Canonical URL missing www when main domain uses it",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Update canonical URL to match the main domain (with www).",
+    "tags": [
+      "canonical",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO00421",
+    "category": "Indexability",
+    "name": "Canonical URL uses different subdomain",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Update canonical URL to use the correct domain.",
+    "tags": [
+      "canonical",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO00184",
+    "category": "International SEO",
+    "name": "Hreflang URL uses www when main domain does not",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Update hreflang URL to match the main domain (without www).",
+    "tags": [
+      "hreflang",
+      "domain"
+    ]
+  },
+  {
+    "id": "SEO00185",
+    "category": "International SEO",
+    "name": "Hreflang URL missing www when main domain uses it",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Update hreflang URL to match the main domain (with www).",
+    "tags": [
+      "hreflang",
+      "domain"
     ]
   }
 ]
