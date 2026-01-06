@@ -2513,8 +2513,16 @@ export function checkRobotsTxt(config: SEOCheckerConfig): SEOIssue[] {
 
   // SEO01165: Sitemap in robots.txt doesn't exist
   for (const sitemapUrl of sitemapUrls) {
-    // Convert URL to file path
-    const sitemapPath = sitemapUrl.replace(config.baseUrl, '').replace(/^\//, '')
+    // Convert URL to file path - extract pathname from URL regardless of domain
+    let sitemapPath: string
+    try {
+      const urlObj = new URL(sitemapUrl)
+      sitemapPath = urlObj.pathname.replace(/^\//, '')
+    }
+    catch {
+      // If URL parsing fails, try simple replace as fallback
+      sitemapPath = sitemapUrl.replace(config.baseUrl, '').replace(/^\//, '')
+    }
     const fullPath = path.join(config.distPath, sitemapPath)
 
     if (!fileExists(fullPath)) {
@@ -2615,7 +2623,16 @@ export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEO
       const locMatches = content.matchAll(/<loc>([^<]+)<\/loc>/g)
       for (const match of locMatches) {
         const loc = match[1]
-        const sitemapName = loc.replace(config.baseUrl, '').replace(/^\//, '')
+        // Extract pathname from URL regardless of domain
+        let sitemapName: string
+        try {
+          const urlObj = new URL(loc)
+          sitemapName = urlObj.pathname.replace(/^\//, '')
+        }
+        catch {
+          // If URL parsing fails, try simple replace as fallback
+          sitemapName = loc.replace(config.baseUrl, '').replace(/^\//, '')
+        }
         const referencedPath = path.join(config.distPath, sitemapName)
         if (fileExists(referencedPath) && !sitemapFiles.includes(referencedPath)) {
           sitemapFiles.push(referencedPath)
@@ -2734,30 +2751,37 @@ export function checkSitemap(config: SEOCheckerConfig, _siteData: SiteData): SEO
       }
 
       // SEO01160: URL references non-existent page
-      if (url.startsWith(config.baseUrl)) {
-        const urlPath = url.replace(config.baseUrl, '').replace(/^\//, '').replace(/\/$/, '')
-        const possiblePaths = [
-          path.join(config.distPath, urlPath, 'index.html'),
-          path.join(config.distPath, `${urlPath}.html`),
-          path.join(config.distPath, urlPath),
-        ]
+      // Extract pathname from URL regardless of domain
+      let urlPath: string
+      try {
+        const urlObj = new URL(url)
+        urlPath = urlObj.pathname.replace(/^\//, '').replace(/\/$/, '')
+      }
+      catch {
+        // If URL parsing fails, try simple replace as fallback
+        urlPath = url.replace(config.baseUrl, '').replace(/^\//, '').replace(/\/$/, '')
+      }
 
-        const exists = possiblePaths.some(p => fileExists(p))
-        if (!exists && urlPath !== '') {
-          const rule = getRule('SEO01160')
-          if (rule) {
-            issues.push({
-              ruleId: 'SEO01160',
-              ruleName: rule.name,
-              category: rule.category,
-              severity: rule.severity,
-              file: sitemapPath,
-              relativePath,
-              element: url.substring(0, 80),
-              fixHint: rule.fixHint,
-              fingerprint: `SEO01160::${url.substring(0, 50)}`,
-            })
-          }
+      const possiblePaths = [
+        path.join(config.distPath, urlPath, 'index.html'),
+        path.join(config.distPath, `${urlPath}.html`),
+      ]
+
+      const exists = possiblePaths.some(p => fileExists(p))
+      if (!exists && urlPath !== '') {
+        const rule = getRule('SEO01160')
+        if (rule) {
+          issues.push({
+            ruleId: 'SEO01160',
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: sitemapPath,
+            relativePath,
+            element: url.substring(0, 80),
+            fixHint: rule.fixHint,
+            fingerprint: `SEO01160::${url.substring(0, 50)}`,
+          })
         }
       }
     }
