@@ -1,7 +1,7 @@
 {
   "name": "@capgo/seo-checker",
   "type": "module",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Static SEO checker for analyzing built HTML files in dist folders",
   "author": "Capgo",
   "license": "MIT",
