@@ -13913,5 +13913,44 @@
       "hreflang",
       "domain"
     ]
+  },
+  {
+    "id": "SEO01172",
+    "category": "Structured Data",
+    "name": "JSON-LD schema validation error",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Fix the schema.org structured data to match the expected format. Validate with Google's Rich Results Test.",
+    "tags": [
+      "schema",
+      "jsonld",
+      "validation"
+    ]
+  },
+  {
+    "id": "SEO01173",
+    "category": "Structured Data",
+    "name": "JSON-LD property type mismatch",
+    "scope": "page",
+    "severity": "warning",
+    "fixHint": "Ensure property values match the expected types defined by schema.org.",
+    "tags": [
+      "schema",
+      "jsonld",
+      "validation"
+    ]
+  },
+  {
+    "id": "SEO01174",
+    "category": "Structured Data",
+    "name": "JSON-LD unknown schema type",
+    "scope": "page",
+    "severity": "notice",
+    "fixHint": "Verify the @type is a valid schema.org type.",
+    "tags": [
+      "schema",
+      "jsonld",
+      "validation"
+    ]
   }
 ]

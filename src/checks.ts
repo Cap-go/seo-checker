@@ -10,6 +10,7 @@ import * as path from 'node:path'
 import { validateUrlDomain } from './domain.js'
 import { fileExists, resolveToFilePath } from './parser.js'
 import { getRule } from './rules.js'
+import { hasSchemaFor, validateJsonLd } from './schemaValidator.js'
 
 // Valid BCP47 language codes (common ones)
 const VALID_LANG_CODES = new Set([
@@ -1373,7 +1374,7 @@ export function checkStructuredData(page: PageData, _config: SEOCheckerConfig): 
 }
 
 /**
- * Check a single schema.org item for required fields
+ * Check a single schema.org item for required fields and validate against JSON Schema
  */
 function checkSchemaItem(item: unknown, page: PageData, issues: SEOIssue[]): void {
   if (typeof item !== 'object' || item === null)
@@ -1388,6 +1389,17 @@ function checkSchemaItem(item: unknown, page: PageData, issues: SEOIssue[]): voi
   const types = Array.isArray(schemaType) ? schemaType : [schemaType]
 
   for (const type of types) {
+    // Check if schema type exists in schema.org
+    if (!hasSchemaFor(type)) {
+      const issue = createIssue('SEO01174', page, {
+        element: `Unknown schema type: ${type}`,
+      })
+      if (issue) {
+        issue.ruleName = `Unknown schema type: ${type}`
+        issues.push(issue)
+      }
+    }
+
     const requiredFields = SCHEMA_REQUIRED_FIELDS[type]
     if (requiredFields) {
       for (const field of requiredFields) {
@@ -1434,6 +1446,29 @@ function checkSchemaItem(item: unknown, page: PageData, issues: SEOIssue[]): voi
               issues.push(issue)
           }
         }
+      }
+    }
+  }
+
+  // Validate against JSON Schema (schema.org)
+  const validationResult = validateJsonLd(obj)
+  if (!validationResult.valid) {
+    // Deduplicate errors by message to avoid noise
+    const seenErrors = new Set<string>()
+    for (const error of validationResult.errors) {
+      const errorKey = `${error.schemaType}:${error.path}:${error.keyword}`
+      if (seenErrors.has(errorKey))
+        continue
+      seenErrors.add(errorKey)
+
+      // Map error keywords to appropriate rule IDs
+      const ruleId = error.keyword === 'type' ? 'SEO01173' : 'SEO01172'
+      const issue = createIssue(ruleId, page, {
+        element: `${error.schemaType}${error.path}: ${error.message}`,
+      })
+      if (issue) {
+        issue.ruleName = `Schema ${error.schemaType}: ${error.message}`
+        issues.push(issue)
       }
     }
   }

@@ -48,7 +48,9 @@
     "check": "node ./dist/cli.js"
   },
   "dependencies": {
-    "cheerio": "^1.0.0"
+    "ajv": "^8.17.1",
+    "cheerio": "^1.0.0",
+    "schema-org-json-schemas": "^2.1.4"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.7.3",
