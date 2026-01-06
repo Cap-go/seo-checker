@@ -56,12 +56,12 @@ export function validateUrlDomain(
   url: string,
   config: SEOCheckerConfig,
 ): {
-    isValid: boolean
-    hostname: string | null
-    expectedHostname: string
-    mainDomain: string
-    issue?: 'wrong_domain' | 'www_mismatch' | 'subdomain'
-  } {
+  isValid: boolean
+  hostname: string | null
+  expectedHostname: string
+  mainDomain: string
+  issue?: 'wrong_domain' | 'www_mismatch' | 'subdomain'
+} {
   const hostname = extractHostname(url)
   const expectedHostname = getExpectedHostname(config)
   const mainDomain = getMainDomain(config)
