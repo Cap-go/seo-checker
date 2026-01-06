@@ -3639,6 +3639,116 @@ describe('checkRedirects', () => {
       }
     })
   })
+
+  describe('SEO01226: Circular redirect detected', () => {
+    it('should trigger for simple circular redirect (A -> B -> A)', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/a /b 301
+/b /a 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01226')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should trigger for longer circular redirect chain (A -> B -> C -> A)', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/a /b 301
+/b /c 301
+/c /a 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01226')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should trigger for self-redirect (A -> A)', () => {
+      const tempDir = createTempDir()
+      try {
+        const redirectsContent = `/a /a 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01226')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should not trigger for valid redirect chain ending at existing page', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'final'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'final', 'index.html'), '<html></html>')
+        const redirectsContent = `/a /b 301
+/b /final 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        expect(hasIssue(issues, 'SEO01226')).toBe(false)
+        // But should still report chain
+        expect(hasIssue(issues, 'SEO01224')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
+
+  describe('Multi-hop redirect chains', () => {
+    it('should report full chain path for 3+ hop redirects', () => {
+      const tempDir = createTempDir()
+      try {
+        fs.mkdirSync(path.join(tempDir, 'd'), { recursive: true })
+        fs.writeFileSync(path.join(tempDir, 'd', 'index.html'), '<html></html>')
+        const redirectsContent = `/a /b 301
+/b /c 301
+/c /d 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        // Should report chain for /a
+        const chainIssue = issues.find(i => i.ruleId === 'SEO01224' && i.element?.includes('/a'))
+        expect(chainIssue).toBeDefined()
+        expect(chainIssue?.element).toContain('/a')
+        expect(chainIssue?.element).toContain('/b')
+        expect(chainIssue?.element).toContain('/c')
+        expect(chainIssue?.element).toContain('/d')
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+
+    it('should check final destination exists for multi-hop chain', () => {
+      const tempDir = createTempDir()
+      try {
+        // No final page exists
+        const redirectsContent = `/a /b 301
+/b /c 301
+/c /nonexistent 301`
+        fs.writeFileSync(path.join(tempDir, '_redirects'), redirectsContent)
+        const config = createConfig({ distPath: tempDir })
+        const issues = checkRedirects(config)
+        // Should report that final destination doesn't exist
+        expect(hasIssue(issues, 'SEO01221')).toBe(true)
+      }
+      finally {
+        cleanupTempDir(tempDir)
+      }
+    })
+  })
 })
 
 // ========================================

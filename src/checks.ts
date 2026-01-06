@@ -2923,8 +2923,72 @@ export function parseRedirectsFile(config: SEOCheckerConfig): RedirectRule[] {
 }
 
 /**
+ * Helper to normalize a redirect path for comparison
+ */
+function normalizeRedirectPath(p: string): string {
+  return p.replace(/^\//, '').replace(/\/$/, '')
+}
+
+/**
+ * Follow a redirect chain and return the full path and final destination
+ * Returns { chain: string[], finalDestination: string, isCircular: boolean, isExternal: boolean }
+ */
+function followRedirectChain(
+  startPath: string,
+  redirectMap: Map<string, RedirectRule>,
+  maxHops: number = 10,
+): { chain: string[], finalDestination: string, isCircular: boolean, isExternal: boolean } {
+  const chain: string[] = [startPath]
+  const visited = new Set<string>()
+  visited.add(normalizeRedirectPath(startPath))
+
+  let current = startPath
+  let isExternal = false
+
+  for (let i = 0; i < maxHops; i++) {
+    // Try to find a redirect rule for the current path
+    const normalizedCurrent = current.startsWith('/') ? current : `/${current}`
+    const rule = redirectMap.get(normalizedCurrent)
+      || redirectMap.get(current)
+      || redirectMap.get(`/${normalizeRedirectPath(current)}`)
+
+    if (!rule) {
+      // No more redirects, we've reached the final destination
+      break
+    }
+
+    const nextPath = rule.to
+    isExternal = rule.isExternal
+
+    // Check for external redirect - stop following
+    if (isExternal) {
+      chain.push(nextPath)
+      return { chain, finalDestination: nextPath, isCircular: false, isExternal: true }
+    }
+
+    // Check for circular redirect
+    const normalizedNext = normalizeRedirectPath(nextPath)
+    if (visited.has(normalizedNext)) {
+      chain.push(nextPath)
+      return { chain, finalDestination: nextPath, isCircular: true, isExternal: false }
+    }
+
+    visited.add(normalizedNext)
+    chain.push(nextPath)
+    current = nextPath
+  }
+
+  return {
+    chain,
+    finalDestination: chain[chain.length - 1],
+    isCircular: false,
+    isExternal,
+  }
+}
+
+/**
  * Check _redirects file for issues
- * SEO01221-01224
+ * SEO01221-01226
  */
 export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
   const issues: SEOIssue[] = []
@@ -2938,11 +3002,14 @@ export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
   const lines = content.split('\n')
   const rules = parseRedirectsFile(config)
 
-  // Build a map of redirect destinations for chain detection
-  const redirectSources = new Map<string, RedirectRule>()
+  // Build a map of redirect sources for chain detection
+  const redirectMap = new Map<string, RedirectRule>()
   for (const rule of rules) {
-    redirectSources.set(rule.from, rule)
+    redirectMap.set(rule.from, rule)
   }
+
+  // Track which circular redirects we've already reported to avoid duplicates
+  const reportedCircular = new Set<string>()
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -2977,13 +3044,102 @@ export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
     const from = parts[0]
     const to = parts[1]
 
-    // Skip splat/wildcard redirects for file existence checks
+    // Skip splat/wildcard redirects for most checks
     const isSplat = from.includes('*') || from.includes(':')
-    const isExternal = to.startsWith('http://') || to.startsWith('https://')
+    const isExternalDest = to.startsWith('http://') || to.startsWith('https://')
 
-    // SEO01221: Redirect destination page does not exist (for local destinations)
-    if (!isExternal && !to.includes('*') && !to.includes(':')) {
-      const toPath = to.replace(/^\//, '').replace(/\/$/, '')
+    // Follow the redirect chain to find circular redirects and final destination
+    if (!isSplat && !isExternalDest && !to.includes('*') && !to.includes(':')) {
+      const { chain, finalDestination, isCircular, isExternal } = followRedirectChain(from, redirectMap)
+
+      // SEO01226: Circular redirect detected
+      if (isCircular) {
+        // Create a unique key for this circular chain to avoid duplicate reports
+        const circularKey = [...chain].sort().join('|')
+        if (!reportedCircular.has(circularKey)) {
+          reportedCircular.add(circularKey)
+          const rule = getRule('SEO01226')
+          if (rule) {
+            issues.push({
+              ruleId: 'SEO01226',
+              ruleName: rule.name,
+              category: rule.category,
+              severity: rule.severity,
+              file: redirectsPath,
+              relativePath: '_redirects',
+              line: i + 1,
+              element: chain.join(' -> '),
+              actual: `Circular: ${chain.join(' -> ')}`,
+              fixHint: rule.fixHint,
+              fingerprint: `SEO01226::${circularKey}`,
+            })
+          }
+        }
+        // Skip other checks for circular redirects
+        continue
+      }
+
+      // SEO01224: Redirect chain detected (more than 1 hop)
+      if (chain.length > 2) {
+        const rule = getRule('SEO01224')
+        if (rule) {
+          issues.push({
+            ruleId: 'SEO01224',
+            ruleName: rule.name,
+            category: rule.category,
+            severity: rule.severity,
+            file: redirectsPath,
+            relativePath: '_redirects',
+            line: i + 1,
+            element: chain.join(' -> '),
+            actual: `Chain (${chain.length - 1} hops): ${chain.join(' -> ')}`,
+            expected: `${from} -> ${finalDestination}`,
+            fixHint: rule.fixHint,
+            fingerprint: `SEO01224::${from}::${to}`,
+          })
+        }
+      }
+
+      // SEO01221: Final destination page does not exist (for local destinations)
+      if (!isExternal) {
+        const finalPath = normalizeRedirectPath(finalDestination)
+        const possiblePaths = [
+          path.join(config.distPath, finalPath, 'index.html'),
+          path.join(config.distPath, `${finalPath}.html`),
+          path.join(config.distPath, finalPath),
+        ]
+
+        const destinationExists = possiblePaths.some(p => fileExists(p))
+
+        if (!destinationExists && finalPath !== '') {
+          const rule = getRule('SEO01221')
+          if (rule) {
+            const element = chain.length > 2
+              ? `${chain.join(' -> ')} (final destination does not exist)`
+              : `${from} -> ${to}`
+            issues.push({
+              ruleId: 'SEO01221',
+              ruleName: rule.name,
+              category: rule.category,
+              severity: rule.severity,
+              file: redirectsPath,
+              relativePath: '_redirects',
+              line: i + 1,
+              element,
+              actual: finalDestination,
+              fixHint: rule.fixHint,
+              fingerprint: `SEO01221::${from}::${finalDestination}`,
+            })
+          }
+        }
+      }
+    }
+    else if (!isSplat && isExternalDest) {
+      // External redirect - nothing to check for destination existence
+    }
+    else if (!isSplat && !isExternalDest) {
+      // Direct redirect (no chain) - check destination exists
+      const toPath = normalizeRedirectPath(to)
       const possiblePaths = [
         path.join(config.distPath, toPath, 'index.html'),
         path.join(config.distPath, `${toPath}.html`),
@@ -2991,9 +3147,7 @@ export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
       ]
 
       const destinationExists = possiblePaths.some(p => fileExists(p))
-
-      // Also check if destination is itself a redirect source (which is fine)
-      const isRedirectSource = redirectSources.has(to) || redirectSources.has(`/${toPath}`)
+      const isRedirectSource = redirectMap.has(to) || redirectMap.has(`/${toPath}`)
 
       if (!destinationExists && !isRedirectSource && toPath !== '') {
         const rule = getRule('SEO01221')
@@ -3017,7 +3171,7 @@ export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
 
     // SEO01223: Redirect source page exists (unnecessary redirect)
     if (!isSplat) {
-      const fromPath = from.replace(/^\//, '').replace(/\/$/, '')
+      const fromPath = normalizeRedirectPath(from)
       const possiblePaths = [
         path.join(config.distPath, fromPath, 'index.html'),
         path.join(config.distPath, `${fromPath}.html`),
@@ -3040,32 +3194,6 @@ export function checkRedirects(config: SEOCheckerConfig): SEOIssue[] {
             actual: from,
             fixHint: rule.fixHint,
             fingerprint: `SEO01223::${from}`,
-          })
-        }
-      }
-    }
-
-    // SEO01224: Redirect chain detected
-    if (!isExternal && !to.includes('*') && !to.includes(':')) {
-      // Check if destination is also a redirect source
-      const normalizedTo = to.startsWith('/') ? to : `/${to}`
-      const chainedRule = redirectSources.get(normalizedTo)
-
-      if (chainedRule) {
-        const rule = getRule('SEO01224')
-        if (rule) {
-          issues.push({
-            ruleId: 'SEO01224',
-            ruleName: rule.name,
-            category: rule.category,
-            severity: rule.severity,
-            file: redirectsPath,
-            relativePath: '_redirects',
-            line: i + 1,
-            element: `${from} -> ${to} -> ${chainedRule.to}`,
-            actual: `Chain: ${from} -> ${to} -> ${chainedRule.to}`,
-            fixHint: rule.fixHint,
-            fingerprint: `SEO01224::${from}::${to}`,
           })
         }
       }

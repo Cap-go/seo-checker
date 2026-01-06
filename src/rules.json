@@ -14579,5 +14579,18 @@
       "sitemap",
       "redirects"
     ]
+  },
+  {
+    "id": "SEO01226",
+    "category": "Redirects",
+    "name": "Circular redirect detected (infinite loop)",
+    "scope": "site",
+    "severity": "error",
+    "fixHint": "Break the redirect loop by removing or updating one of the redirects in the cycle.",
+    "tags": [
+      "redirects",
+      "loop",
+      "critical"
+    ]
   }
 ]
