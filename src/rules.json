@@ -278,26 +278,26 @@
   {
     "id": "SEO00025",
     "category": "Content - Text",
-    "name": "<meta name='description'> too short (<90 chars)",
+    "name": "<meta name='description'> too short (<100 chars)",
     "scope": "page",
     "severity": "warning",
     "fixHint": "Expand <meta name='description'> to be more descriptive.",
     "tags": [
       "length"
     ],
-    "threshold": 90
+    "threshold": 100
   },
   {
     "id": "SEO00026",
     "category": "Content - Text",
-    "name": "<meta name='description'> too long (>155 chars)",
+    "name": "<meta name='description'> too short (<120 chars)",
     "scope": "page",
-    "severity": "warning",
-    "fixHint": "Shorten <meta name='description'> to reduce truncation risk.",
+    "severity": "notice",
+    "fixHint": "Expand <meta name='description'> to be more descriptive.",
     "tags": [
       "length"
     ],
-    "threshold": 155
+    "threshold": 120
   },
   {
     "id": "SEO00027",
@@ -314,18 +314,6 @@
   {
     "id": "SEO00028",
     "category": "Content - Text",
-    "name": "<meta name='description'> too long (>170 chars)",
-    "scope": "page",
-    "severity": "warning",
-    "fixHint": "Shorten <meta name='description'> to reduce truncation risk.",
-    "tags": [
-      "length"
-    ],
-    "threshold": 170
-  },
-  {
-    "id": "SEO00029",
-    "category": "Content - Text",
     "name": "<meta name='description'> too long (>200 chars)",
     "scope": "page",
     "severity": "warning",
@@ -334,6 +322,18 @@
       "length"
     ],
     "threshold": 200
+  },
+  {
+    "id": "SEO00029",
+    "category": "Content - Text",
+    "name": "<meta name='description'> too long (>320 chars)",
+    "scope": "page",
+    "severity": "error",
+    "fixHint": "Shorten <meta name='description'> to reduce truncation risk.",
+    "tags": [
+      "length"
+    ],
+    "threshold": 320
   },
   {
     "id": "SEO00030",
