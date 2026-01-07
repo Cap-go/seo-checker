@@ -47,6 +47,7 @@ function createResult(overrides: Partial<CheckResult> = {}): CheckResult {
     },
     duration: 1234,
     excludedCount: 0,
+    disabledCount: 0,
     ...overrides,
   }
 }
@@ -159,6 +160,13 @@ describe('formatConsoleReport', () => {
     expect(output).toContain('Excluded issues: 5')
   })
 
+  it('should show disabled count when present', () => {
+    const result = createResult({ disabledCount: 3 })
+    const output = formatConsoleReport(result)
+
+    expect(output).toContain('Disabled rule issues: 3')
+  })
+
   it('should show duration', () => {
     const result = createResult({ duration: 5678 })
     const output = formatConsoleReport(result)
@@ -187,6 +195,7 @@ describe('formatJsonReport', () => {
     expect(parsed.stats).toBeDefined()
     expect(parsed.duration).toBeDefined()
     expect(parsed.excludedCount).toBeDefined()
+    expect(parsed.disabledCount).toBeDefined()
   })
 
   it('should pretty print with indentation', () => {

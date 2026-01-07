@@ -240,8 +240,9 @@ describe('filterDisabledRules', () => {
   it('should return all issues when no disabled rules', () => {
     const issues = [createIssue(), createIssue({ ruleId: 'SEO00002' })]
     const config = createConfig()
-    const filtered = filterDisabledRules(issues, config)
+    const { filtered, disabledCount } = filterDisabledRules(issues, config)
     expect(filtered.length).toBe(2)
+    expect(disabledCount).toBe(0)
   })
 
   it('should filter out disabled rules', () => {
@@ -252,9 +253,10 @@ describe('filterDisabledRules', () => {
     const config = createConfig({
       rules: { disabled: ['SEO00001'] },
     })
-    const filtered = filterDisabledRules(issues, config)
+    const { filtered, disabledCount } = filterDisabledRules(issues, config)
     expect(filtered.length).toBe(1)
     expect(filtered[0].ruleId).toBe('SEO00002')
+    expect(disabledCount).toBe(1)
   })
 
   it('should filter multiple disabled rules', () => {
@@ -266,9 +268,10 @@ describe('filterDisabledRules', () => {
     const config = createConfig({
       rules: { disabled: ['SEO00001', 'SEO00003'] },
     })
-    const filtered = filterDisabledRules(issues, config)
+    const { filtered, disabledCount } = filterDisabledRules(issues, config)
     expect(filtered.length).toBe(1)
     expect(filtered[0].ruleId).toBe('SEO00002')
+    expect(disabledCount).toBe(2)
   })
 })
 

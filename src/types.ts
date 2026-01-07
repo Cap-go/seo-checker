@@ -229,6 +229,7 @@ export interface CheckResult {
     issuesByRule: Record<string, number>
   }
   excludedCount: number
+  disabledCount: number
   duration: number
 }
 

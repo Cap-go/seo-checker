@@ -105,15 +105,30 @@ export function filterExcludedIssues(
 /**
  * Filter issues based on disabled rules
  */
-export function filterDisabledRules(issues: SEOIssue[], config: SEOCheckerConfig): SEOIssue[] {
+export function filterDisabledRules(
+  issues: SEOIssue[],
+  config: SEOCheckerConfig,
+): { filtered: SEOIssue[], disabledCount: number } {
   const disabled = config.rules?.disabled || []
 
   if (disabled.length === 0) {
-    return issues
+    return { filtered: issues, disabledCount: 0 }
   }
 
   const disabledSet = new Set(disabled)
-  return issues.filter(issue => !disabledSet.has(issue.ruleId))
+  const filtered: SEOIssue[] = []
+  let disabledCount = 0
+
+  for (const issue of issues) {
+    if (disabledSet.has(issue.ruleId)) {
+      disabledCount++
+    }
+    else {
+      filtered.push(issue)
+    }
+  }
+
+  return { filtered, disabledCount }
 }
 
 /**

@@ -289,7 +289,8 @@ async function run(): Promise<void> {
   console.log(`Site-wide checks completed (${Date.now() - siteCheckStart}ms)`)
 
   // Filter disabled rules
-  allIssues = filterDisabledRules(allIssues, config)
+  const { filtered: afterDisabled, disabledCount } = filterDisabledRules(allIssues, config)
+  allIssues = afterDisabled
 
   // Filter exclusions
   const { filtered, excludedCount } = filterExcludedIssues(allIssues, config)
@@ -319,6 +320,7 @@ async function run(): Promise<void> {
       issuesByRule,
     },
     excludedCount,
+    disabledCount,
     duration,
   }
 

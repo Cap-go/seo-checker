@@ -129,6 +129,10 @@ export function formatConsoleReport(result: CheckResult): string {
   lines.push(`    ${COLORS.blue}Notices:${COLORS.reset}  ${result.stats.issuesBySeverity.notice || 0}`)
   lines.push('')
 
+  if (result.disabledCount > 0) {
+    lines.push(`  ${COLORS.dim}Disabled rule issues: ${result.disabledCount}${COLORS.reset}`)
+  }
+
   if (result.excludedCount > 0) {
     lines.push(`  ${COLORS.dim}Excluded issues: ${result.excludedCount}${COLORS.reset}`)
   }
@@ -202,6 +206,9 @@ export function formatGitHubReport(result: CheckResult): string {
   lines.push(`Errors: ${result.stats.issuesBySeverity.error || 0}`)
   lines.push(`Warnings: ${result.stats.issuesBySeverity.warning || 0}`)
   lines.push(`Notices: ${result.stats.issuesBySeverity.notice || 0}`)
+  if (result.disabledCount > 0) {
+    lines.push(`Disabled: ${result.disabledCount}`)
+  }
   if (result.excludedCount > 0) {
     lines.push(`Excluded: ${result.excludedCount}`)
   }
