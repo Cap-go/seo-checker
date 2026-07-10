@@ -46,7 +46,8 @@
     "lint:fix": "eslint . --fix",
     "prepublishOnly": "npm run build",
     "check": "node ./dist/cli.js",
-    "test": "bun test"
+    "test": "bun test",
+    "changelog:ai": "node scripts/generate-ai-changelog.mjs"
   },
   "dependencies": {
     "ajv": "^8.17.1",
